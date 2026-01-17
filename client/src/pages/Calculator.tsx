@@ -6,30 +6,97 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Calculator as CalcIcon, Save, Package } from "lucide-react";
+import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface SelectedWood extends WoodItem {
   quantity: number;
+  usage: string; // e.g., "Table Leg", "Top"
+  usedLength: number; // Length used in cm
+  calculatedCost: number; // Cost based on used length
+  isCustom?: boolean; // Flag for manually added items
 }
 
 export default function Calculator() {
   const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
-  const [laborCost, setLaborCost] = useState<number>(0);
-  const [wastePercentage, setWastePercentage] = useState<number>(10);
+  
+  // Costs
+  const [carpenterCost, setCarpenterCost] = useState<number>(0);
+  const [paintingCost, setPaintingCost] = useState<number>(0);
+  const [packingCost, setPackingCost] = useState<number>(0);
+  
+  // Percentages
+  const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
+  
   const [projectName, setProjectName] = useState<string>("");
+
+  // Custom Item Input State
+  const [customCode, setCustomCode] = useState("");
+  const [customDesc, setCustomDesc] = useState("");
+  const [customCost, setCustomCost] = useState<number>(0);
+  const [customRefQty, setCustomRefQty] = useState<number>(100);
 
   const addWood = (code: string) => {
     const wood = woodData.find((w) => w.code === code);
     if (wood) {
-      setSelectedWoods([...selectedWoods, { ...wood, quantity: 1 }]);
+      // Default used length is the reference length
+      setSelectedWoods([...selectedWoods, { 
+        ...wood, 
+        quantity: 1, 
+        usage: "", 
+        usedLength: wood.refQty,
+        calculatedCost: wood.cost 
+      }]);
     }
   };
 
-  const updateQuantity = (index: number, qty: number) => {
+  const addCustomWood = () => {
+    if (!customCode || !customDesc || customCost <= 0) {
+      toast.error("Please fill in all custom item fields correctly.");
+      return;
+    }
+    
+    const newItem: SelectedWood = {
+      code: customCode,
+      description: customDesc,
+      unit: "cm",
+      refQty: customRefQty,
+      cost: customCost,
+      quantity: 1,
+      usage: "Custom Part",
+      usedLength: customRefQty,
+      calculatedCost: customCost,
+      isCustom: true
+    };
+
+    setSelectedWoods([...selectedWoods, newItem]);
+    
+    // Reset inputs
+    setCustomCode("");
+    setCustomDesc("");
+    setCustomCost(0);
+    setCustomRefQty(100);
+    toast.success("Custom item added!");
+  };
+
+  const updateItem = (index: number, field: keyof SelectedWood, value: any) => {
     const newWoods = [...selectedWoods];
-    newWoods[index].quantity = Math.max(1, Math.ceil(qty));
+    const item = newWoods[index];
+
+    if (field === "quantity") {
+      item.quantity = Math.max(1, Math.ceil(value));
+    } else if (field === "usage") {
+      item.usage = value;
+    } else if (field === "usedLength") {
+      item.usedLength = Math.max(1, Math.ceil(value));
+      // Recalculate cost based on length ratio: (RefCost / RefLength) * UsedLength
+      // Round up to nearest integer
+      const costPerUnit = item.cost / item.refQty;
+      item.calculatedCost = Math.ceil(costPerUnit * item.usedLength);
+    }
+
     setSelectedWoods(newWoods);
   };
 
@@ -40,10 +107,13 @@ export default function Calculator() {
   };
 
   // Calculation Logic (All Integers, Round Up)
-  const totalWoodCost = selectedWoods.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+  const totalWoodCost = selectedWoods.reduce((sum, item) => sum + (item.calculatedCost * item.quantity), 0);
   const wasteCost = Math.ceil(totalWoodCost * (wastePercentage / 100));
   const totalMaterialCost = totalWoodCost + wasteCost;
-  const totalCost = totalMaterialCost + laborCost;
+  
+  const totalLaborCost = carpenterCost + paintingCost + packingCost;
+  const totalCost = totalMaterialCost + totalLaborCost;
+  
   const profit = Math.ceil(totalCost * (marginPercentage / 100));
   const sellingPrice = totalCost + profit;
 
@@ -110,8 +180,10 @@ export default function Calculator() {
                 <Plus className="w-6 h-6" /> Add Materials
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 space-y-4">
-              <div className="flex gap-2">
+            <CardContent className="p-4 md:p-6 space-y-6">
+              {/* Add Standard Item */}
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-xs text-muted-foreground">Select Standard Wood</Label>
                 <Select onValueChange={addWood}>
                   <SelectTrigger className="neo-input h-12 text-lg w-full">
                     <SelectValue placeholder="Select Wood Item..." />
@@ -119,52 +191,120 @@ export default function Calculator() {
                   <SelectContent className="border-2 border-black shadow-[4px_4px_0px_0px_#000000] max-h-[300px]">
                     {woodData.map((wood) => (
                       <SelectItem key={wood.code} value={wood.code} className="font-medium cursor-pointer focus:bg-chart-1 focus:text-black py-3">
-                        <span className="font-bold">{wood.code}</span> - {wood.description} ({wood.cost} THB)
+                        <span className="font-bold">{wood.code}</span> - {wood.description} ({wood.cost} THB / {wood.refQty}cm)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Add Custom Item */}
+              <div className="bg-gray-50 p-4 border-2 border-black border-dashed space-y-4">
+                <Label className="font-bold uppercase text-xs text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" /> Or Add Custom Material
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Input 
+                    placeholder="Code" 
+                    value={customCode} 
+                    onChange={(e) => setCustomCode(e.target.value)}
+                    className="bg-white border-black"
+                  />
+                  <Input 
+                    placeholder="Description" 
+                    value={customDesc} 
+                    onChange={(e) => setCustomDesc(e.target.value)}
+                    className="bg-white border-black md:col-span-3"
+                  />
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      placeholder="Cost" 
+                      value={customCost || ""} 
+                      onChange={(e) => setCustomCost(parseFloat(e.target.value))}
+                      className="bg-white border-black pr-8"
+                    />
+                    <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">THB</span>
+                  </div>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      placeholder="Ref Length" 
+                      value={customRefQty || ""} 
+                      onChange={(e) => setCustomRefQty(parseFloat(e.target.value))}
+                      className="bg-white border-black pr-8"
+                    />
+                    <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">cm</span>
+                  </div>
+                  <Button onClick={addCustomWood} className="md:col-span-2 bg-black text-white hover:bg-gray-800 font-bold uppercase">
+                    Add Custom Item
+                  </Button>
+                </div>
+              </div>
+
               {selectedWoods.length > 0 ? (
                 <div className="space-y-4">
                   {/* Desktop Table View */}
-                  <div className="hidden md:block border-2 border-black mt-4">
+                  <div className="hidden md:block border-2 border-black mt-4 overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted border-b-2 border-black">
                         <TableRow className="hover:bg-muted">
-                          <TableHead className="text-black font-bold uppercase">Code</TableHead>
+                          <TableHead className="text-black font-bold uppercase w-[100px]">Code</TableHead>
+                          <TableHead className="text-black font-bold uppercase w-[150px]">Usage</TableHead>
                           <TableHead className="text-black font-bold uppercase">Description</TableHead>
-                          <TableHead className="text-black font-bold uppercase text-right">Cost</TableHead>
-                          <TableHead className="text-black font-bold uppercase text-center w-[100px]">Qty</TableHead>
-                          <TableHead className="text-black font-bold uppercase text-right">Total</TableHead>
+                          <TableHead className="text-black font-bold uppercase text-center w-[100px]">Len (cm)</TableHead>
+                          <TableHead className="text-black font-bold uppercase text-right w-[100px]">Cost/Pc</TableHead>
+                          <TableHead className="text-black font-bold uppercase text-center w-[80px]">Qty</TableHead>
+                          <TableHead className="text-black font-bold uppercase text-right w-[100px]">Total</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedWoods.map((item, index) => (
                           <TableRow key={`${item.code}-${index}`} className="border-b border-black/20 hover:bg-blue-50">
-                            <TableCell className="font-medium">{item.code}</TableCell>
-                            <TableCell>{item.description}</TableCell>
-                            <TableCell className="text-right">{item.cost}</TableCell>
+                            <TableCell className="font-medium">
+                              {item.isCustom ? <span className="text-blue-600">* {item.code}</span> : item.code}
+                            </TableCell>
+                            <TableCell>
+                              <Input 
+                                value={item.usage}
+                                onChange={(e) => updateItem(index, "usage", e.target.value)}
+                                placeholder="Part..."
+                                className="h-8 border-black/50 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell className="text-xs">{item.description}</TableCell>
+                            <TableCell>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                value={item.usedLength}
+                                onChange={(e) => updateItem(index, "usedLength", parseInt(e.target.value) || 1)}
+                                className="h-8 border-black/50 text-center font-bold"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              {item.calculatedCost}
+                              <span className="block text-[10px] text-muted-foreground">Ref: {item.cost}/{item.refQty}</span>
+                            </TableCell>
                             <TableCell>
                               <Input 
                                 type="number" 
                                 min="1"
                                 value={item.quantity}
-                                onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 1)}
-                                className="h-8 border-2 border-black text-center font-bold"
+                                onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
+                                className="h-8 border-2 border-black text-center font-bold bg-white"
                               />
                             </TableCell>
                             <TableCell className="text-right font-bold">
-                              {(item.cost * item.quantity).toLocaleString()}
+                              {(item.calculatedCost * item.quantity).toLocaleString()}
                             </TableCell>
                             <TableCell>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 onClick={() => removeWood(index)}
-                                className="hover:bg-red-100 hover:text-red-600"
+                                className="hover:bg-red-100 hover:text-red-600 h-8 w-8"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -181,8 +321,17 @@ export default function Calculator() {
                       <div key={`${item.code}-${index}-mobile`} className="border-2 border-black p-3 bg-gray-50 shadow-[2px_2px_0px_0px_#000000] relative">
                         <div className="flex justify-between items-start mb-2 pr-8">
                           <div>
-                            <div className="font-bold text-lg text-primary">{item.code}</div>
-                            <div className="text-sm text-muted-foreground leading-tight">{item.description}</div>
+                            <div className="font-bold text-lg text-primary flex items-center gap-2">
+                              {item.code}
+                              {item.isCustom && <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded">CUSTOM</span>}
+                            </div>
+                            <div className="text-sm text-muted-foreground leading-tight mb-2">{item.description}</div>
+                            <Input 
+                              value={item.usage}
+                              onChange={(e) => updateItem(index, "usage", e.target.value)}
+                              placeholder="Usage (e.g. Leg)"
+                              className="h-8 border-black/50 text-xs w-full bg-white"
+                            />
                           </div>
                           <Button 
                             variant="ghost" 
@@ -194,20 +343,32 @@ export default function Calculator() {
                           </Button>
                         </div>
                         
-                        <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-black/10">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase text-muted-foreground">Cost: {item.cost}</span>
-                            <span className="text-xs text-muted-foreground">x</span>
+                        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-black/10">
+                          <div>
+                            <Label className="text-[10px] uppercase text-muted-foreground">Length (cm)</Label>
+                            <Input 
+                              type="number" 
+                              min="1"
+                              value={item.usedLength}
+                              onChange={(e) => updateItem(index, "usedLength", parseInt(e.target.value) || 1)}
+                              className="h-8 border-black text-center font-bold bg-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] uppercase text-muted-foreground">Qty</Label>
                             <Input 
                               type="number" 
                               min="1"
                               value={item.quantity}
-                              onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 1)}
-                              className="h-8 w-16 border-2 border-black text-center font-bold bg-white"
+                              onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
+                              className="h-8 border-black text-center font-bold bg-white text-sm"
                             />
                           </div>
-                          <div className="font-black text-lg">
-                            {(item.cost * item.quantity).toLocaleString()} ฿
+                          <div className="text-right">
+                            <Label className="text-[10px] uppercase text-muted-foreground">Total</Label>
+                            <div className="font-black text-lg leading-8">
+                              {(item.calculatedCost * item.quantity).toLocaleString()}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -230,44 +391,78 @@ export default function Calculator() {
                 <CalcIcon className="w-6 h-6" /> Costs & Margins
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="laborCost" className="font-bold uppercase">Labor Cost (THB)</Label>
-                <Input 
-                  id="laborCost" 
-                  type="number" 
-                  min="0"
-                  value={laborCost}
-                  onChange={(e) => setLaborCost(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="neo-input h-12 text-lg font-bold"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="waste" className="font-bold uppercase">Waste (%)</Label>
-                <div className="relative">
-                  <Input 
-                    id="waste" 
-                    type="number" 
-                    min="0"
-                    value={wastePercentage}
-                    onChange={(e) => setWastePercentage(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="neo-input h-12 text-lg font-bold pr-8"
-                  />
-                  <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
+            <CardContent className="p-4 md:p-6 space-y-6">
+              {/* Waste & Margin */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="waste" className="font-bold uppercase text-red-600">Wood Waste (%)</Label>
+                  <div className="relative">
+                    <Input 
+                      id="waste" 
+                      type="number" 
+                      min="0"
+                      value={wastePercentage}
+                      onChange={(e) => setWastePercentage(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="neo-input h-12 text-lg font-bold pr-8 border-red-200 focus:border-red-500"
+                    />
+                    <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="margin" className="font-bold uppercase text-green-600">Profit Margin (%)</Label>
+                  <div className="relative">
+                    <Input 
+                      id="margin" 
+                      type="number" 
+                      min="0"
+                      value={marginPercentage}
+                      onChange={(e) => setMarginPercentage(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="neo-input h-12 text-lg font-bold pr-8 border-green-200 focus:border-green-500"
+                    />
+                    <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="margin" className="font-bold uppercase">Profit Margin (%)</Label>
-                <div className="relative">
+
+              <div className="h-px bg-black/10 w-full"></div>
+
+              {/* Labor Costs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="carpenterCost" className="font-bold uppercase">Carpenter Cost</Label>
                   <Input 
-                    id="margin" 
+                    id="carpenterCost" 
                     type="number" 
                     min="0"
-                    value={marginPercentage}
-                    onChange={(e) => setMarginPercentage(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="neo-input h-12 text-lg font-bold pr-8"
+                    value={carpenterCost}
+                    onChange={(e) => setCarpenterCost(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="neo-input h-12 text-lg font-bold"
+                    placeholder="0"
                   />
-                  <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paintingCost" className="font-bold uppercase">Painting Cost</Label>
+                  <Input 
+                    id="paintingCost" 
+                    type="number" 
+                    min="0"
+                    value={paintingCost}
+                    onChange={(e) => setPaintingCost(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="neo-input h-12 text-lg font-bold"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="packingCost" className="font-bold uppercase">Packing Cost</Label>
+                  <Input 
+                    id="packingCost" 
+                    type="number" 
+                    min="0"
+                    value={packingCost}
+                    onChange={(e) => setPackingCost(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="neo-input h-12 text-lg font-bold"
+                    placeholder="0"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -306,8 +501,16 @@ export default function Calculator() {
                     <span className="font-bold text-red-600">+{wasteCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-blue-50">
-                    <span className="font-medium">Labor</span>
-                    <span className="font-bold text-blue-600">+{laborCost.toLocaleString()}</span>
+                    <span className="font-medium">Carpenter</span>
+                    <span className="font-bold text-blue-600">+{carpenterCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between p-3 md:p-4 bg-blue-50">
+                    <span className="font-medium">Painting</span>
+                    <span className="font-bold text-blue-600">+{paintingCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between p-3 md:p-4 bg-blue-50">
+                    <span className="font-medium">Packing</span>
+                    <span className="font-bold text-blue-600">+{packingCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-gray-100 font-bold border-t-4 border-black">
                     <span className="uppercase">Total Cost</span>
