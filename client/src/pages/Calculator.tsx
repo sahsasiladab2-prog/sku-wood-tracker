@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { woodData, WoodItem } from "@/lib/woodData";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle } from "lucide-react";
+import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SelectedWood extends WoodItem {
   quantity: number;
@@ -17,6 +19,12 @@ interface SelectedWood extends WoodItem {
   calculatedCost: number; // Cost based on used length
   isCustom?: boolean; // Flag for manually added items
 }
+
+// Mock database for version tracking
+const mockProjectHistory: Record<string, number> = {
+  "Red Chair": 1,
+  "Oak Table": 3
+};
 
 export default function Calculator() {
   const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
@@ -31,12 +39,34 @@ export default function Calculator() {
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
   const [projectName, setProjectName] = useState<string>("");
+  const [projectVersion, setProjectVersion] = useState<number>(1);
+  const [projectNote, setProjectNote] = useState<string>("");
 
   // Custom Item Input State
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
   const [customCode, setCustomCode] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customCost, setCustomCost] = useState<number>(0);
   const [customRefQty, setCustomRefQty] = useState<number>(100);
+
+  // Searchable Select State
+  const [openCombobox, setOpenCombobox] = useState(false);
+
+  // Auto-increment version when project name changes
+  useEffect(() => {
+    if (projectName) {
+      // Check if project exists in mock history (case-insensitive)
+      const existingVersion = Object.entries(mockProjectHistory).find(
+        ([name]) => name.toLowerCase() === projectName.toLowerCase()
+      );
+      
+      if (existingVersion) {
+        setProjectVersion(existingVersion[1] + 1);
+      } else {
+        setProjectVersion(1);
+      }
+    }
+  }, [projectName]);
 
   const addWood = (code: string) => {
     const wood = woodData.find((w) => w.code === code);
@@ -49,18 +79,19 @@ export default function Calculator() {
         usedLength: wood.refQty,
         calculatedCost: wood.cost 
       }]);
+      setOpenCombobox(false);
     }
   };
 
   const addCustomWood = () => {
-    if (!customCode || !customDesc || customCost <= 0) {
-      toast.error("Please fill in all custom item fields correctly.");
+    if (!customCode || customCost <= 0) {
+      toast.error("Please fill in Code and Cost.");
       return;
     }
     
     const newItem: SelectedWood = {
       code: customCode,
-      description: customDesc,
+      description: customDesc || "Custom Item",
       unit: "cm",
       refQty: customRefQty,
       cost: customCost,
@@ -78,6 +109,7 @@ export default function Calculator() {
     setCustomDesc("");
     setCustomCost(0);
     setCustomRefQty(100);
+    setIsCustomOpen(false);
     toast.success("Custom item added!");
   };
 
@@ -127,7 +159,7 @@ export default function Calculator() {
       return;
     }
     
-    toast.success(`Project "${projectName}" saved! Selling Price: ${sellingPrice.toLocaleString()} THB`);
+    toast.success(`Project "${projectName} v.${projectVersion}" saved! Selling Price: ${sellingPrice.toLocaleString()} THB`);
   };
 
   return (
@@ -160,15 +192,31 @@ export default function Calculator() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="projectName" className="font-bold uppercase">Project Name</Label>
-                <Input 
-                  id="projectName" 
-                  placeholder="e.g. Modern Coffee Table" 
-                  className="neo-input h-12 text-lg"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-3 space-y-2">
+                  <Label htmlFor="projectName" className="font-bold uppercase">Project Name</Label>
+                  <Input 
+                    id="projectName" 
+                    placeholder="e.g. Modern Coffee Table" 
+                    className="neo-input h-12 text-lg"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="projectVersion" className="font-bold uppercase">Version</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 font-bold text-muted-foreground">v.</span>
+                    <Input 
+                      id="projectVersion" 
+                      type="number"
+                      min="1"
+                      className="neo-input h-12 text-lg font-bold pl-8 text-center bg-gray-50"
+                      value={projectVersion}
+                      readOnly
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -181,65 +229,99 @@ export default function Calculator() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-6">
-              {/* Add Standard Item */}
+              {/* Searchable Select */}
               <div className="space-y-2">
-                <Label className="font-bold uppercase text-xs text-muted-foreground">Select Standard Wood</Label>
-                <Select onValueChange={addWood}>
-                  <SelectTrigger className="neo-input h-12 text-lg w-full">
-                    <SelectValue placeholder="Select Wood Item..." />
-                  </SelectTrigger>
-                  <SelectContent className="border-2 border-black shadow-[4px_4px_0px_0px_#000000] max-h-[300px]">
-                    {woodData.map((wood) => (
-                      <SelectItem key={wood.code} value={wood.code} className="font-medium cursor-pointer focus:bg-chart-1 focus:text-black py-3">
-                        <span className="font-bold">{wood.code}</span> - {wood.description} ({wood.cost} THB / {wood.refQty}cm)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="font-bold uppercase text-xs text-muted-foreground">Select Wood Code</Label>
+                <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCombobox}
+                      className="w-full justify-between neo-input h-12 text-lg font-normal"
+                    >
+                      Select wood code...
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] md:w-[400px] p-0 border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
+                    <Command>
+                      <CommandInput placeholder="Type code to search..." className="h-12 text-base" />
+                      <CommandList>
+                        <CommandEmpty>No wood found.</CommandEmpty>
+                        <CommandGroup>
+                          {woodData.map((wood) => (
+                            <CommandItem
+                              key={wood.code}
+                              value={wood.code}
+                              onSelect={(currentValue) => {
+                                addWood(currentValue);
+                              }}
+                              className="cursor-pointer py-3 text-base"
+                            >
+                              <span className="font-bold mr-2">{wood.code}</span>
+                              <span className="text-muted-foreground">({wood.cost} THB)</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              {/* Add Custom Item */}
-              <div className="bg-gray-50 p-4 border-2 border-black border-dashed space-y-4">
-                <Label className="font-bold uppercase text-xs text-muted-foreground flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> Or Add Custom Material
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Input 
-                    placeholder="Code" 
-                    value={customCode} 
-                    onChange={(e) => setCustomCode(e.target.value)}
-                    className="bg-white border-black"
-                  />
-                  <Input 
-                    placeholder="Description" 
-                    value={customDesc} 
-                    onChange={(e) => setCustomDesc(e.target.value)}
-                    className="bg-white border-black md:col-span-3"
-                  />
-                  <div className="relative">
-                    <Input 
-                      type="number" 
-                      placeholder="Cost" 
-                      value={customCost || ""} 
-                      onChange={(e) => setCustomCost(parseFloat(e.target.value))}
-                      className="bg-white border-black pr-8"
-                    />
-                    <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">THB</span>
+              {/* Collapsible Custom Item */}
+              <div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsCustomOpen(!isCustomOpen)}
+                  className="text-xs font-bold uppercase border-black hover:bg-gray-100"
+                >
+                  {isCustomOpen ? <ChevronUp className="w-4 h-4 mr-1" /> : <ChevronDown className="w-4 h-4 mr-1" />}
+                  {isCustomOpen ? "Close Custom Item" : "Add Custom Item"}
+                </Button>
+                
+                {isCustomOpen && (
+                  <div className="mt-4 bg-gray-50 p-4 border-2 border-black border-dashed space-y-4 animate-in slide-in-from-top-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Input 
+                        placeholder="Code" 
+                        value={customCode} 
+                        onChange={(e) => setCustomCode(e.target.value)}
+                        className="bg-white border-black"
+                      />
+                      <Input 
+                        placeholder="Description (Optional)" 
+                        value={customDesc} 
+                        onChange={(e) => setCustomDesc(e.target.value)}
+                        className="bg-white border-black md:col-span-3"
+                      />
+                      <div className="relative">
+                        <Input 
+                          type="number" 
+                          placeholder="Cost" 
+                          value={customCost || ""} 
+                          onChange={(e) => setCustomCost(parseFloat(e.target.value))}
+                          className="bg-white border-black pr-8"
+                        />
+                        <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">THB</span>
+                      </div>
+                      <div className="relative">
+                        <Input 
+                          type="number" 
+                          placeholder="Ref Length" 
+                          value={customRefQty || ""} 
+                          onChange={(e) => setCustomRefQty(parseFloat(e.target.value))}
+                          className="bg-white border-black pr-8"
+                        />
+                        <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">cm</span>
+                      </div>
+                      <Button onClick={addCustomWood} className="md:col-span-2 bg-black text-white hover:bg-gray-800 font-bold uppercase">
+                        Add Custom Item
+                      </Button>
+                    </div>
                   </div>
-                  <div className="relative">
-                    <Input 
-                      type="number" 
-                      placeholder="Ref Length" 
-                      value={customRefQty || ""} 
-                      onChange={(e) => setCustomRefQty(parseFloat(e.target.value))}
-                      className="bg-white border-black pr-8"
-                    />
-                    <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">cm</span>
-                  </div>
-                  <Button onClick={addCustomWood} className="md:col-span-2 bg-black text-white hover:bg-gray-800 font-bold uppercase">
-                    Add Custom Item
-                  </Button>
-                </div>
+                )}
               </div>
 
               {selectedWoods.length > 0 ? (
@@ -249,9 +331,8 @@ export default function Calculator() {
                     <Table>
                       <TableHeader className="bg-muted border-b-2 border-black">
                         <TableRow className="hover:bg-muted">
-                          <TableHead className="text-black font-bold uppercase w-[100px]">Code</TableHead>
+                          <TableHead className="text-black font-bold uppercase w-[120px]">Code</TableHead>
                           <TableHead className="text-black font-bold uppercase w-[150px]">Usage</TableHead>
-                          <TableHead className="text-black font-bold uppercase">Description</TableHead>
                           <TableHead className="text-black font-bold uppercase text-center w-[100px]">Len (cm)</TableHead>
                           <TableHead className="text-black font-bold uppercase text-right w-[100px]">Cost/Pc</TableHead>
                           <TableHead className="text-black font-bold uppercase text-center w-[80px]">Qty</TableHead>
@@ -273,7 +354,6 @@ export default function Calculator() {
                                 className="h-8 border-black/50 text-xs"
                               />
                             </TableCell>
-                            <TableCell className="text-xs">{item.description}</TableCell>
                             <TableCell>
                               <Input 
                                 type="number" 
@@ -283,9 +363,8 @@ export default function Calculator() {
                                 className="h-8 border-black/50 text-center font-bold"
                               />
                             </TableCell>
-                            <TableCell className="text-right text-xs">
+                            <TableCell className="text-right text-xs font-mono">
                               {item.calculatedCost}
-                              <span className="block text-[10px] text-muted-foreground">Ref: {item.cost}/{item.refQty}</span>
                             </TableCell>
                             <TableCell>
                               <Input 
@@ -320,12 +399,11 @@ export default function Calculator() {
                     {selectedWoods.map((item, index) => (
                       <div key={`${item.code}-${index}-mobile`} className="border-2 border-black p-3 bg-gray-50 shadow-[2px_2px_0px_0px_#000000] relative">
                         <div className="flex justify-between items-start mb-2 pr-8">
-                          <div>
-                            <div className="font-bold text-lg text-primary flex items-center gap-2">
+                          <div className="w-full pr-2">
+                            <div className="font-bold text-lg text-primary flex items-center gap-2 mb-1">
                               {item.code}
                               {item.isCustom && <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded">CUSTOM</span>}
                             </div>
-                            <div className="text-sm text-muted-foreground leading-tight mb-2">{item.description}</div>
                             <Input 
                               value={item.usage}
                               onChange={(e) => updateItem(index, "usage", e.target.value)}
@@ -384,11 +462,11 @@ export default function Calculator() {
             </CardContent>
           </Card>
 
-          {/* Other Costs */}
+          {/* Costs & Note */}
           <Card className="neo-card bg-white">
             <CardHeader className="border-b-2 border-black bg-chart-5 text-white py-3 md:py-4">
               <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
-                <CalcIcon className="w-6 h-6" /> Costs & Margins
+                <CalcIcon className="w-6 h-6" /> Costs
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-6">
@@ -441,18 +519,6 @@ export default function Calculator() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="paintingCost" className="font-bold uppercase">Painting Cost</Label>
-                  <Input 
-                    id="paintingCost" 
-                    type="number" 
-                    min="0"
-                    value={paintingCost}
-                    onChange={(e) => setPaintingCost(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="neo-input h-12 text-lg font-bold"
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="packingCost" className="font-bold uppercase">Packing Cost</Label>
                   <Input 
                     id="packingCost" 
@@ -464,6 +530,32 @@ export default function Calculator() {
                     placeholder="0"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paintingCost" className="font-bold uppercase">Painting Cost</Label>
+                  <Input 
+                    id="paintingCost" 
+                    type="number" 
+                    min="0"
+                    value={paintingCost}
+                    onChange={(e) => setPaintingCost(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="neo-input h-12 text-lg font-bold"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="h-px bg-black/10 w-full"></div>
+
+              {/* Note */}
+              <div className="space-y-2">
+                <Label htmlFor="note" className="font-bold uppercase">Note</Label>
+                <Textarea 
+                  id="note" 
+                  placeholder="Add notes about this project..." 
+                  className="neo-input min-h-[100px] text-base"
+                  value={projectNote}
+                  onChange={(e) => setProjectNote(e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -505,12 +597,12 @@ export default function Calculator() {
                     <span className="font-bold text-blue-600">+{carpenterCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-blue-50">
-                    <span className="font-medium">Painting</span>
-                    <span className="font-bold text-blue-600">+{paintingCost.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between p-3 md:p-4 bg-blue-50">
                     <span className="font-medium">Packing</span>
                     <span className="font-bold text-blue-600">+{packingCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between p-3 md:p-4 bg-blue-50">
+                    <span className="font-medium">Painting</span>
+                    <span className="font-bold text-blue-600">+{paintingCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-gray-100 font-bold border-t-4 border-black">
                     <span className="uppercase">Total Cost</span>
