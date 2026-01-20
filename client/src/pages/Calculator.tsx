@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useProjects } from "@/contexts/ProjectContext";
-import { woodData, WoodItem } from "@/lib/woodData";
+import { useCustomData } from "@/contexts/CustomDataContext";
+import { WoodItem } from "@/lib/woodData";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle, Chevr
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -36,6 +38,7 @@ export default function Calculator() {
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
   const { addProject, getProjectVersion } = useProjects();
+  const { materials: woodData, usages, addMaterial, addUsage } = useCustomData();
   const [projectName, setProjectName] = useState<string>("");
   const [projectVersion, setProjectVersion] = useState<number>(1);
   const [projectNote, setProjectNote] = useState<string>("");
@@ -79,14 +82,21 @@ export default function Calculator() {
       return;
     }
     
-    const newItem: SelectedWood = {
+    const newMaterial: WoodItem = {
       code: customCode,
       description: customDesc || "Custom Item",
       unit: "cm",
       refQty: customRefQty,
-      cost: customCost,
+      cost: customCost
+    };
+
+    // Add to persistent storage
+    addMaterial(newMaterial);
+
+    const newItem: SelectedWood = {
+      ...newMaterial,
       quantity: 1,
-      usage: "Custom Part",
+      usage: "",
       usedLength: customRefQty,
       calculatedCost: customCost,
       isCustom: true
@@ -111,6 +121,7 @@ export default function Calculator() {
       item.quantity = Math.max(1, Math.ceil(value));
     } else if (field === "usage") {
       item.usage = value;
+      if (value) addUsage(value);
     } else if (field === "usedLength") {
       item.usedLength = Math.max(1, Math.ceil(value));
       // Recalculate cost based on length ratio: (RefCost / RefLength) * UsedLength
@@ -363,13 +374,21 @@ export default function Calculator() {
                               {item.isCustom ? <span className="text-blue-600">* {item.code}</span> : item.code}
                             </TableCell>
                             <TableCell>
-                              <Input 
-                                value={item.usage}
-                                onChange={(e) => updateItem(index, "usage", e.target.value)}
-                                placeholder="Part..."
-                                className="h-8 border-black/50 text-xs"
-                              />
-                            </TableCell>
+                          <div className="relative">
+                            <Input 
+                              value={item.usage}
+                              onChange={(e) => updateItem(index, "usage", e.target.value)}
+                              className="h-8 md:h-10 text-xs md:text-sm"
+                              placeholder="e.g. Leg"
+                              list={`usage-list-${index}`}
+                            />
+                            <datalist id={`usage-list-${index}`}>
+                              {usages.map((u) => (
+                                <option key={u} value={u} />
+                              ))}
+                            </datalist>
+                          </div>
+                        </TableCell>
                             <TableCell>
                               <Input 
                                 type="number" 

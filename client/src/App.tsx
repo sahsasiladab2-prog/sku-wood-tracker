@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ProjectProvider } from "./contexts/ProjectContext";
+import { CustomDataProvider } from "./contexts/CustomDataContext";
 import Home from "./pages/Home";
 import Calculator from "./pages/Calculator";
 import Tracker from "./pages/Tracker";
@@ -34,6 +35,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ProjectProvider>
+        <CustomDataProvider>
       <ThemeProvider
         defaultTheme="light"
         // switchable
@@ -43,7 +45,8 @@ function App() {
           <Router />
         </TooltipProvider>
       </ThemeProvider>
-    </ProjectProvider>
+    </CustomDataProvider>
+      </ProjectProvider>
     </ErrorBoundary>
   );
 }

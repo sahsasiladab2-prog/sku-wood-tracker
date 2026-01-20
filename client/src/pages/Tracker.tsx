@@ -5,34 +5,39 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit } from "lucide-react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 
 
 export default function Tracker() {
   const { projects } = useProjects();
-  const [expandedSku, setExpandedSku] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-  // Transform projects to SKUs format
-  const skus = projects.map(p => ({
-    id: p.id,
-    name: `${p.name} v.${p.version}`,
-    stage: p.status,
-    progress: p.status === "Idea" ? 25 : p.status === "Prototype" ? 50 : p.status === "Production" ? 75 : 100,
-    margin: p.margin,
-    xp: p.totalCost > 5000 ? 1000 : 500, // Simple XP logic
-    status: "On Track",
-    tasks: [
-      { id: 1, title: "Cost Calculation", completed: true },
-      { id: 2, title: "Material Check", completed: true },
-      { id: 3, title: "Prototype Build", completed: p.status !== "Idea" },
-      { id: 4, title: "Final Review", completed: p.status === "Production" },
-    ]
-  }));
+  // Group projects by name
+  const groupedProjects = projects.reduce((acc, project) => {
+    if (!acc[project.name]) {
+      acc[project.name] = [];
+    }
+    acc[project.name].push(project);
+    return acc;
+  }, {} as Record<string, typeof projects>);
 
-  const toggleExpand = (id: string) => {
-    setExpandedSku(expandedSku === id ? null : id);
+  // Sort versions within groups
+  Object.keys(groupedProjects).forEach(name => {
+    groupedProjects[name].sort((a, b) => b.version - a.version); // Newest version first
+  });
+
+  const toggleGroup = (name: string) => {
+    setExpandedGroup(expandedGroup === name ? null : name);
+  };
+
+  const calculateCostDiff = (current: typeof projects[0], previous: typeof projects[0] | undefined) => {
+    if (!previous) return null;
+    const diff = current.totalCost - previous.totalCost;
+    const percent = ((diff / previous.totalCost) * 100).toFixed(1);
+    return { diff, percent };
   };
 
   const getStatusColor = (status: string) => {
@@ -109,101 +114,100 @@ export default function Tracker() {
 
       {/* SKU List */}
       <div className="space-y-4 md:space-y-6">
-        {skus.length === 0 && (
+        {Object.keys(groupedProjects).length === 0 && (
           <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
             <p className="text-muted-foreground text-lg">No SKUs found. Start by creating a project in Calculator!</p>
-            <Button variant="link" className="mt-2 text-chart-2 font-bold uppercase" onClick={() => window.location.href = "/calculator"}>
-              Go to Calculator
-            </Button>
+            <Link href="/calculator">
+              <Button variant="link" className="mt-2 text-chart-2 font-bold uppercase">
+                Go to Calculator
+              </Button>
+            </Link>
           </div>
         )}
-        {skus.map((sku) => (
-          <Card key={sku.id} className="neo-card bg-white overflow-hidden">
-            <div className="flex flex-col md:flex-row border-b-2 border-black">
-              {/* Left: SKU Info */}
-              <div className="p-4 md:p-6 flex-1 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <Badge className={cn("border-2 border-black text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded-none shadow-[2px_2px_0px_0px_#000000]", getStageColor(sku.stage))}>
-                        {sku.stage}
-                      </Badge>
-                      <Badge className={cn("border-2 border-black text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded-none shadow-[2px_2px_0px_0px_#000000]", getStatusColor(sku.status))}>
-                        {sku.status}
-                      </Badge>
-                    </div>
-                    <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{sku.name}</h3>
+        {Object.entries(groupedProjects).map(([name, groupVersions]) => {
+          const latestVersion = groupVersions[0];
+          const isExpanded = expandedGroup === name;
+
+          return (
+            <Card key={name} className="neo-card bg-white overflow-hidden">
+              {/* Group Header */}
+              <div 
+                className="p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleGroup(name)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-chart-1 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
+                    <Folder className="w-6 h-6 text-white" />
                   </div>
-                  <div className="text-right pl-2">
-                    <p className="font-bold text-xs md:text-sm text-muted-foreground uppercase">Margin</p>
-                    <p className={cn("font-heading text-xl md:text-2xl font-bold", sku.margin > 40 ? "text-green-600" : "text-black")}>
-                      {sku.margin}%
+                  <div>
+                    <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
+                    <p className="text-sm text-muted-foreground font-bold uppercase mt-1">
+                      {groupVersions.length} Version{groupVersions.length > 1 ? 's' : ''} • Latest: v.{latestVersion.version}
                     </p>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs md:text-sm font-bold uppercase">
-                    <span>Progress</span>
-                    <span>{sku.progress}%</span>
+                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  <div className="text-right">
+                    <p className="font-bold text-xs text-muted-foreground uppercase">Latest Cost</p>
+                    <p className="font-heading text-xl font-bold">{latestVersion.totalCost.toLocaleString()} THB</p>
                   </div>
-                  <div className="h-3 md:h-4 border-2 border-black bg-gray-100 relative">
-                    <div 
-                      className="absolute top-0 left-0 h-full bg-chart-3 transition-all duration-1000"
-                      style={{ width: `${sku.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Mobile Expand Button */}
-                <div className="md:hidden pt-2">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full flex items-center justify-center gap-2 text-sm font-bold uppercase border-2 border-black/10 hover:bg-gray-100"
-                    onClick={() => toggleExpand(sku.id)}
-                  >
-                    {expandedSku === sku.id ? (
-                      <>Hide Quests <ChevronUp className="w-4 h-4" /></>
-                    ) : (
-                      <>View Quests <ChevronDown className="w-4 h-4" /></>
-                    )}
+                  <Button variant="ghost" size="icon" className="border-2 border-black/10">
+                    {isExpanded ? <ChevronUp /> : <ChevronDown />}
                   </Button>
                 </div>
               </div>
 
-              {/* Right: Tasks / Quests (Collapsible on Mobile) */}
-              <div className={cn(
-                "w-full md:w-1/3 bg-gray-50 border-t-2 md:border-t-0 md:border-l-2 border-black p-4 md:p-6 transition-all",
-                expandedSku === sku.id ? "block" : "hidden md:block"
-              )}>
-                <h4 className="font-heading text-base md:text-lg font-bold uppercase mb-3 md:mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 md:w-5 md:h-5" /> Active Quests
-                </h4>
-                <div className="space-y-2 md:space-y-3">
-                  {sku.tasks.map((task) => (
-                    <div key={task.id} className="flex items-center gap-3 group cursor-pointer p-2 md:p-0 hover:bg-white md:hover:bg-transparent rounded-md md:rounded-none border border-transparent md:border-none hover:border-black/10 md:hover:border-none transition-all">
-                      <div className={cn(
-                        "w-5 h-5 md:w-6 md:h-6 border-2 border-black flex items-center justify-center transition-all flex-shrink-0",
-                        task.completed ? "bg-green-500 text-white" : "bg-white group-hover:bg-gray-200"
-                      )}>
-                        {task.completed && <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" />}
+              {/* Versions List (Collapsible) */}
+              {isExpanded && (
+                <div className="border-t-2 border-black bg-gray-50 p-4 space-y-4">
+                  <h4 className="font-heading text-sm font-bold uppercase flex items-center gap-2 text-muted-foreground mb-2">
+                    <History className="w-4 h-4" /> Version History
+                  </h4>
+                  
+                  {groupVersions.map((version, index) => {
+                    const previousVersion = groupVersions[index + 1];
+                    const diff = calculateCostDiff(version, previousVersion);
+
+                    return (
+                      <div key={version.id} className="bg-white border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+                        <div className="flex flex-col md:flex-row justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className="bg-black text-white hover:bg-black border-none text-xs px-2 py-0.5">v.{version.version}</Badge>
+                              <span className="text-xs font-bold text-muted-foreground uppercase">ID: {version.id.slice(0, 8)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-lg">Total Cost: {version.totalCost.toLocaleString()} THB</span>
+                              {diff && (
+                                <Badge className={cn(
+                                  "ml-2 border-none font-bold",
+                                  diff.diff < 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                )}>
+                                  {diff.diff < 0 ? <ArrowDown className="w-3 h-3 mr-1" /> : <ArrowUp className="w-3 h-3 mr-1" />}
+                                  {Math.abs(diff.diff).toLocaleString()} THB ({Math.abs(Number(diff.percent))}%)
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              <span className="font-bold text-black">Note:</span> {version.note || "-"}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                             {/* Edit Button Placeholder - In real app, this would navigate to edit page */}
+                            <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8">
+                              <Edit className="w-3 h-3 mr-1" /> Edit
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <span className={cn(
-                        "font-medium text-xs md:text-sm uppercase transition-all leading-tight",
-                        task.completed ? "line-through text-muted-foreground" : "text-black"
-                      )}>
-                        {task.title}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                <Button variant="outline" className="w-full mt-4 md:mt-6 border-2 border-black font-bold uppercase hover:bg-black hover:text-white transition-all text-xs md:text-sm h-10">
-                  Manage Tasks
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
