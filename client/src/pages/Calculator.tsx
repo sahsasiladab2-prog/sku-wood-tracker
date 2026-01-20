@@ -39,7 +39,8 @@ export default function Calculator() {
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
-  const { projects, addProject, getProjectVersion } = useProjects();
+  const { projects, addProject, updateProject, getProjectVersion } = useProjects();
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const { materials: woodData, usages, addMaterial, addUsage } = useCustomData();
   const [projectName, setProjectName] = useState<string>("");
   const [projectVersion, setProjectVersion] = useState<number>(1);
@@ -78,6 +79,8 @@ export default function Calculator() {
         setPackingCost(projectToEdit.costs.packing);
         setWastePercentage(projectToEdit.costs.wastePercentage || 5);
         setMarginPercentage(projectToEdit.margin);
+        setProjectVersion(projectToEdit.version);
+        setEditingProjectId(projectToEdit.id);
 
         // Map materials back to SelectedWood format
         if (projectToEdit.materials) {
@@ -89,18 +92,18 @@ export default function Calculator() {
           setSelectedWoods(mappedMaterials);
         }
         
-        toast.info(`Loaded data from ${projectToEdit.name} v.${projectToEdit.version}`);
+        toast.info(`Editing ${projectToEdit.name} v.${projectToEdit.version}`);
       }
     }
   }, [projects]);
 
-  // Auto-increment version when project name changes
+  // Auto-increment version when project name changes (ONLY if not editing existing project)
   useEffect(() => {
-    if (projectName) {
+    if (projectName && !editingProjectId) {
       const nextVersion = getProjectVersion(projectName);
       setProjectVersion(nextVersion);
     }
-  }, [projectName, getProjectVersion]);
+  }, [projectName, getProjectVersion, editingProjectId]);
 
   const addWood = (code: string) => {
     const wood = woodData.find((w) => w.code === code);
@@ -201,10 +204,10 @@ export default function Calculator() {
       return;
     }
 
-    addProject({
+    const projectData = {
       name: projectName,
       version: projectVersion,
-      status: "Idea",
+      status: "Idea" as const,
       margin: marginPercentage,
       totalCost: totalCost,
       sellingPrice: sellingPrice,
@@ -217,17 +220,26 @@ export default function Calculator() {
         waste: wasteCost,
         wastePercentage: wastePercentage
       }
-    });
-    
-    toast.success(`Project "${projectName} v.${projectVersion}" saved! Selling Price: ${sellingPrice.toLocaleString()} THB`);
-    
-    // Reset form for next project
-    setProjectName("");
-    setProjectNote("");
-    setSelectedWoods([]);
-    setCarpenterCost(0);
-    setPaintingCost(0);
-    setPackingCost(0);
+    };
+
+    if (editingProjectId) {
+      updateProject(editingProjectId, projectData);
+      toast.success(`Project "${projectName} v.${projectVersion}" updated!`);
+      // Clear edit mode after update
+      setEditingProjectId(null);
+      setLocation("/tracker"); // Redirect back to tracker after edit
+    } else {
+      addProject(projectData);
+      toast.success(`Project "${projectName} v.${projectVersion}" created!`);
+      
+      // Reset form for next project
+      setProjectName("");
+      setProjectNote("");
+      setSelectedWoods([]);
+      setCarpenterCost(0);
+      setPaintingCost(0);
+      setPackingCost(0);
+    }
   };
 
   return (

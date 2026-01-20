@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 
 
 export default function Tracker() {
-  const { projects } = useProjects();
+  const { projects, deleteProject } = useProjects();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   // Group projects by name
@@ -195,10 +196,24 @@ export default function Tracker() {
                           
                           <div className="flex items-center gap-2">
                              <Link href={`/calculator?edit=${version.id}`}>
-                              <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8">
+                              <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-chart-1 hover:text-white transition-colors">
                                 <Edit className="w-3 h-3 mr-1" /> Edit
                               </Button>
                             </Link>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-red-500 hover:text-white transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Are you sure you want to delete ${name} v.${version.version}?`)) {
+                                  deleteProject(version.id);
+                                  toast.success(`Deleted ${name} v.${version.version}`);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" /> Delete
+                            </Button>
                           </div>
                         </div>
                       </div>
