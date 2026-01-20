@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useProjects } from "@/contexts/ProjectContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -7,59 +8,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock Data for SKUs
-const initialSkus = [
-  {
-    id: 1,
-    name: "Oak Coffee Table",
-    stage: "Production",
-    progress: 80,
-    margin: 42,
-    xp: 1200,
-    status: "On Track",
-    tasks: [
-      { id: 1, title: "Design Draft", completed: true },
-      { id: 2, title: "Material Selection", completed: true },
-      { id: 3, title: "Prototype V1", completed: true },
-      { id: 4, title: "Cost Analysis", completed: true },
-      { id: 5, title: "Final Assembly", completed: false },
-    ]
-  },
-  {
-    id: 2,
-    name: "Minimal Chair",
-    stage: "Prototyping",
-    progress: 45,
-    margin: 35,
-    xp: 450,
-    status: "Delayed",
-    tasks: [
-      { id: 1, title: "Design Draft", completed: true },
-      { id: 2, title: "Material Selection", completed: true },
-      { id: 3, title: "Prototype V1", completed: false },
-      { id: 4, title: "Cost Analysis", completed: false },
-    ]
-  },
-  {
-    id: 3,
-    name: "Wall Shelf Unit",
-    stage: "Concept",
-    progress: 15,
-    margin: 0,
-    xp: 100,
-    status: "New",
-    tasks: [
-      { id: 1, title: "Design Draft", completed: true },
-      { id: 2, title: "Material Selection", completed: false },
-    ]
-  }
-];
+
 
 export default function Tracker() {
-  const [skus, setSkus] = useState(initialSkus);
-  const [expandedSku, setExpandedSku] = useState<number | null>(null);
+  const { projects } = useProjects();
+  const [expandedSku, setExpandedSku] = useState<string | null>(null);
 
-  const toggleExpand = (id: number) => {
+  // Transform projects to SKUs format
+  const skus = projects.map(p => ({
+    id: p.id,
+    name: `${p.name} v.${p.version}`,
+    stage: p.status,
+    progress: p.status === "Idea" ? 25 : p.status === "Prototype" ? 50 : p.status === "Production" ? 75 : 100,
+    margin: p.margin,
+    xp: p.totalCost > 5000 ? 1000 : 500, // Simple XP logic
+    status: "On Track",
+    tasks: [
+      { id: 1, title: "Cost Calculation", completed: true },
+      { id: 2, title: "Material Check", completed: true },
+      { id: 3, title: "Prototype Build", completed: p.status !== "Idea" },
+      { id: 4, title: "Final Review", completed: p.status === "Production" },
+    ]
+  }));
+
+  const toggleExpand = (id: string) => {
     setExpandedSku(expandedSku === id ? null : id);
   };
 
@@ -137,6 +109,14 @@ export default function Tracker() {
 
       {/* SKU List */}
       <div className="space-y-4 md:space-y-6">
+        {skus.length === 0 && (
+          <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+            <p className="text-muted-foreground text-lg">No SKUs found. Start by creating a project in Calculator!</p>
+            <Button variant="link" className="mt-2 text-chart-2 font-bold uppercase" onClick={() => window.location.href = "/calculator"}>
+              Go to Calculator
+            </Button>
+          </div>
+        )}
         {skus.map((sku) => (
           <Card key={sku.id} className="neo-card bg-white overflow-hidden">
             <div className="flex flex-col md:flex-row border-b-2 border-black">

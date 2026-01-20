@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useProjects } from "@/contexts/ProjectContext";
 import { woodData, WoodItem } from "@/lib/woodData";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,11 +21,7 @@ interface SelectedWood extends WoodItem {
   isCustom?: boolean; // Flag for manually added items
 }
 
-// Mock database for version tracking
-const mockProjectHistory: Record<string, number> = {
-  "Red Chair": 1,
-  "Oak Table": 3
-};
+
 
 export default function Calculator() {
   const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
@@ -38,6 +35,7 @@ export default function Calculator() {
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
+  const { addProject, getProjectVersion } = useProjects();
   const [projectName, setProjectName] = useState<string>("");
   const [projectVersion, setProjectVersion] = useState<number>(1);
   const [projectNote, setProjectNote] = useState<string>("");
@@ -55,18 +53,10 @@ export default function Calculator() {
   // Auto-increment version when project name changes
   useEffect(() => {
     if (projectName) {
-      // Check if project exists in mock history (case-insensitive)
-      const existingVersion = Object.entries(mockProjectHistory).find(
-        ([name]) => name.toLowerCase() === projectName.toLowerCase()
-      );
-      
-      if (existingVersion) {
-        setProjectVersion(existingVersion[1] + 1);
-      } else {
-        setProjectVersion(1);
-      }
+      const nextVersion = getProjectVersion(projectName);
+      setProjectVersion(nextVersion);
     }
-  }, [projectName]);
+  }, [projectName, getProjectVersion]);
 
   const addWood = (code: string) => {
     const wood = woodData.find((w) => w.code === code);
@@ -158,8 +148,34 @@ export default function Calculator() {
       toast.error("Please add at least one wood item!");
       return;
     }
+
+    addProject({
+      name: projectName,
+      version: projectVersion,
+      status: "Idea",
+      margin: marginPercentage,
+      totalCost: totalCost,
+      sellingPrice: sellingPrice,
+      note: projectNote,
+      materials: selectedWoods,
+      costs: {
+        carpenter: carpenterCost,
+        painting: paintingCost,
+        packing: packingCost,
+        waste: wasteCost,
+        wastePercentage: wastePercentage
+      }
+    });
     
     toast.success(`Project "${projectName} v.${projectVersion}" saved! Selling Price: ${sellingPrice.toLocaleString()} THB`);
+    
+    // Reset form for next project
+    setProjectName("");
+    setProjectNote("");
+    setSelectedWoods([]);
+    setCarpenterCost(0);
+    setPaintingCost(0);
+    setPackingCost(0);
   };
 
   return (
