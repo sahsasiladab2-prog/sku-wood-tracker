@@ -41,6 +41,17 @@ export default function Tracker() {
     return { diff, percent };
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "On Track": return "bg-green-500 text-white";
@@ -167,7 +178,9 @@ export default function Tracker() {
                   
                   {groupVersions.map((version, index) => {
                     const previousVersion = groupVersions[index + 1];
+                    const firstVersion = groupVersions[groupVersions.length - 1];
                     const diff = calculateCostDiff(version, previousVersion);
+                    const diffFromFirst = version.version > 1 ? calculateCostDiff(version, firstVersion) : null;
 
                     return (
                       <div key={version.id} className="bg-white border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
@@ -176,16 +189,31 @@ export default function Tracker() {
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className="bg-black text-white hover:bg-black border-none text-xs px-2 py-0.5">v.{version.version}</Badge>
                               <span className="text-xs font-bold text-muted-foreground uppercase">ID: {version.id.slice(0, 8)}</span>
+                              <span className="text-[10px] text-muted-foreground ml-auto md:ml-2">
+                                {formatDate(version.updatedAt)}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-bold text-lg">Total Cost: {version.totalCost.toLocaleString()} THB</span>
+                              
+                              {/* Compare with Previous Version */}
                               {diff && (
                                 <Badge className={cn(
-                                  "ml-2 border-none font-bold",
+                                  "border-none font-bold",
                                   diff.diff < 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                                 )}>
                                   {diff.diff < 0 ? <ArrowDown className="w-3 h-3 mr-1" /> : <ArrowUp className="w-3 h-3 mr-1" />}
-                                  {Math.abs(diff.diff).toLocaleString()} THB ({Math.abs(Number(diff.percent))}%)
+                                  {Math.abs(diff.diff).toLocaleString()} ({Math.abs(Number(diff.percent))}%)
+                                </Badge>
+                              )}
+
+                              {/* Compare with First Version */}
+                              {diffFromFirst && version.version > 1 && (
+                                <Badge className={cn(
+                                  "border-none font-bold bg-blue-100 text-blue-700"
+                                )}>
+                                  <span className="mr-1 text-[10px] uppercase">vs v.1:</span>
+                                  {diffFromFirst.diff < 0 ? "-" : "+"}{Math.abs(diffFromFirst.diff).toLocaleString()}
                                 </Badge>
                               )}
                             </div>
