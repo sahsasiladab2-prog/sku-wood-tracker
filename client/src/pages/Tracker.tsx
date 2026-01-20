@@ -194,10 +194,11 @@ export default function Tracker() {
                           </div>
                           
                           <div className="flex items-center gap-2">
-                             {/* Edit Button Placeholder - In real app, this would navigate to edit page */}
-                            <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8">
-                              <Edit className="w-3 h-3 mr-1" /> Edit
-                            </Button>
+                             <Link href={`/calculator?edit=${version.id}`}>
+                              <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8">
+                                <Edit className="w-3 h-3 mr-1" /> Edit
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </div>

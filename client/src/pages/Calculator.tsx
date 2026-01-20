@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useCustomData } from "@/contexts/CustomDataContext";
 import { WoodItem } from "@/lib/woodData";
@@ -26,6 +27,7 @@ interface SelectedWood extends WoodItem {
 
 
 export default function Calculator() {
+  const [location, setLocation] = useLocation();
   const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
   
   // Costs
@@ -37,7 +39,7 @@ export default function Calculator() {
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
-  const { addProject, getProjectVersion } = useProjects();
+  const { projects, addProject, getProjectVersion } = useProjects();
   const { materials: woodData, usages, addMaterial, addUsage } = useCustomData();
   const [projectName, setProjectName] = useState<string>("");
   const [projectVersion, setProjectVersion] = useState<number>(1);
@@ -52,6 +54,45 @@ export default function Calculator() {
 
   // Searchable Select State
   const [openCombobox, setOpenCombobox] = useState(false);
+
+  // Load project data if editing
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const editId = searchParams.get("edit");
+
+    if (editId) {
+      const projectToEdit = projects.find(p => p.id === editId);
+      if (projectToEdit) {
+        setProjectName(projectToEdit.name);
+        // Keep the same version if editing, or maybe user wants to create new version based on old one?
+        // For now, let's load the version but if they change name, it will recalculate.
+        // Actually, if we are "editing" to create a NEW version, we should probably load everything EXCEPT the version (let it auto-calc).
+        // But user request was "Edit", implying modification. 
+        // However, in this system, "Versions" are immutable snapshots usually.
+        // Let's load the data as a "Template" for the NEXT version.
+        // So we load name, materials, costs, note. Version will be auto-calculated as next version.
+        
+        setProjectNote(projectToEdit.note || "");
+        setCarpenterCost(projectToEdit.costs.carpenter);
+        setPaintingCost(projectToEdit.costs.painting);
+        setPackingCost(projectToEdit.costs.packing);
+        setWastePercentage(projectToEdit.costs.wastePercentage || 5);
+        setMarginPercentage(projectToEdit.margin);
+
+        // Map materials back to SelectedWood format
+        if (projectToEdit.materials) {
+          const mappedMaterials = projectToEdit.materials.map(m => ({
+            ...m,
+            // Ensure calculatedCost is present (it should be in saved data)
+            calculatedCost: m.calculatedCost || m.cost
+          }));
+          setSelectedWoods(mappedMaterials);
+        }
+        
+        toast.info(`Loaded data from ${projectToEdit.name} v.${projectToEdit.version}`);
+      }
+    }
+  }, [projects]);
 
   // Auto-increment version when project name changes
   useEffect(() => {
