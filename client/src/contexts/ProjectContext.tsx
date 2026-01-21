@@ -1,14 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { nanoid } from "nanoid";
 
+export interface ChannelPricing {
+  id: string;
+  name: string; // e.g., "Shopee A", "Lazada", "Retail"
+  price: number;
+  profit: number;
+  marginPercent: number;
+}
+
 export interface Project {
   id: string;
   name: string;
   version: number;
   status: "Idea" | "Prototype" | "Production" | "Discontinued";
-  margin: number;
+  margin: number; // Keep for backward compatibility or as "Default/Target Margin"
   totalCost: number;
-  sellingPrice: number;
+  sellingPrice: number; // Keep for backward compatibility (maybe as "Base Price")
+  channels?: ChannelPricing[]; // New field for multi-channel pricing
   updatedAt: string;
   note?: string;
   materials?: any[];

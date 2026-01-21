@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search, Store } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -39,6 +39,11 @@ export default function Calculator() {
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
   const [marginPercentage, setMarginPercentage] = useState<number>(30);
   
+  // Multi-Channel Pricing State
+  const [channels, setChannels] = useState<{ id: string; name: string; price: number }[]>([
+    { id: "default", name: "Default Price", price: 0 }
+  ]);
+
   const { projects, addProject, updateProject, getProjectVersion } = useProjects();
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const { materials: woodData, usages, addMaterial, addUsage } = useCustomData();
@@ -81,6 +86,14 @@ export default function Calculator() {
         setMarginPercentage(projectToEdit.margin);
         setProjectVersion(projectToEdit.version);
         setEditingProjectId(projectToEdit.id);
+
+        // Load channels if exist, otherwise use default
+        if (projectToEdit.channels && projectToEdit.channels.length > 0) {
+          setChannels(projectToEdit.channels.map(c => ({ id: c.id, name: c.name, price: c.price })));
+        } else {
+          // Backward compatibility: use sellingPrice as default channel
+          setChannels([{ id: "default", name: "Default Price", price: projectToEdit.sellingPrice }]);
+        }
 
         // Map materials back to SelectedWood format
         if (projectToEdit.materials) {
@@ -194,6 +207,28 @@ export default function Calculator() {
   const profit = Math.ceil(totalCost * (marginPercentage / 100));
   const sellingPrice = totalCost + profit;
 
+  // Update default channel price if it hasn't been manually edited (optional logic, but let's keep it simple for now)
+  // Actually, let's sync the "Default Price" channel with the calculated sellingPrice if it exists and hasn't been modified?
+  // Better approach: The "Margin %" input controls the "Base Price". 
+  // The Channels are independent overrides.
+  // Let's initialize new channels with the calculated sellingPrice.
+
+  const addChannel = () => {
+    setChannels([...channels, { id: crypto.randomUUID(), name: "New Channel", price: sellingPrice }]);
+  };
+
+  const removeChannel = (index: number) => {
+    const newChannels = [...channels];
+    newChannels.splice(index, 1);
+    setChannels(newChannels);
+  };
+
+  const updateChannel = (index: number, field: keyof typeof channels[0], value: any) => {
+    const newChannels = [...channels];
+    newChannels[index] = { ...newChannels[index], [field]: value };
+    setChannels(newChannels);
+  };
+
   const handleSaveProject = () => {
     if (!projectName) {
       toast.error("Please enter a project name!");
@@ -204,13 +239,25 @@ export default function Calculator() {
       return;
     }
 
+    // Calculate profit for each channel
+    const calculatedChannels = channels.map(c => {
+      const channelProfit = c.price - totalCost;
+      const channelMargin = totalCost > 0 ? (channelProfit / totalCost) * 100 : 0;
+      return {
+        ...c,
+        profit: channelProfit,
+        marginPercent: parseFloat(channelMargin.toFixed(1))
+      };
+    });
+
     const projectData = {
       name: projectName,
       version: projectVersion,
       status: "Idea" as const,
       margin: marginPercentage,
       totalCost: totalCost,
-      sellingPrice: sellingPrice,
+      sellingPrice: sellingPrice, // This remains as the "Base/Calculated Price"
+      channels: calculatedChannels,
       note: projectNote,
       materials: selectedWoods,
       costs: {
@@ -645,6 +692,76 @@ export default function Calculator() {
                   onChange={(e) => setProjectNote(e.target.value)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Multi-Channel Pricing */}
+          <Card className="neo-card bg-white">
+            <CardHeader className="border-b-2 border-black bg-purple-500 text-white py-3 md:py-4">
+              <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
+                <Store className="w-6 h-6" /> Sales Channels Pricing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 space-y-4">
+              <div className="space-y-4">
+                {channels.map((channel, index) => {
+                  const profit = channel.price - totalCost;
+                  const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0";
+                  const isPositive = profit >= 0;
+
+                  return (
+                    <div key={channel.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 border-2 border-black/10 rounded-lg">
+                      <div className="flex-1 w-full md:w-auto">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Channel Name</Label>
+                        <Input 
+                          value={channel.name}
+                          onChange={(e) => updateChannel(index, "name", e.target.value)}
+                          className="h-9 bg-white border-black font-bold"
+                          placeholder="e.g. Shopee A"
+                        />
+                      </div>
+                      <div className="w-full md:w-[150px]">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Selling Price</Label>
+                        <div className="relative">
+                          <Input 
+                            type="number"
+                            value={channel.price}
+                            onChange={(e) => updateChannel(index, "price", parseFloat(e.target.value) || 0)}
+                            className="h-9 bg-white border-black font-bold pr-8"
+                          />
+                          <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">THB</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 w-full md:w-auto flex items-center justify-between md:justify-start gap-4 px-2">
+                        <div>
+                          <div className="text-[10px] uppercase text-muted-foreground">Profit</div>
+                          <div className={cn("font-bold", isPositive ? "text-green-600" : "text-red-600")}>
+                            {profit.toLocaleString()} THB
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase text-muted-foreground">Margin</div>
+                          <div className={cn("font-bold", isPositive ? "text-green-600" : "text-red-600")}>
+                            {margin}%
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeChannel(index)}
+                        className="text-red-500 hover:bg-red-100 self-end md:self-center"
+                        disabled={channels.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+              <Button onClick={addChannel} variant="outline" className="w-full border-2 border-dashed border-black hover:bg-gray-50">
+                <Plus className="w-4 h-4 mr-2" /> Add Sales Channel
+              </Button>
             </CardContent>
           </Card>
         </div>

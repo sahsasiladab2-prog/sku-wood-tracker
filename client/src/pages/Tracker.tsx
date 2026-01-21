@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2 } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -220,6 +220,33 @@ export default function Tracker() {
                             <div className="mt-2 text-sm text-muted-foreground">
                               <span className="font-bold text-black">Note:</span> {version.note || "-"}
                             </div>
+
+                            {/* Multi-Channel Pricing Display */}
+                            {version.channels && version.channels.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-black/10">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Store className="w-3 h-3 text-purple-600" />
+                                  <span className="text-xs font-bold uppercase text-purple-600">Sales Channels</span>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  {version.channels.map((channel) => (
+                                    <div key={channel.id} className="bg-purple-50 border border-purple-200 p-2 rounded text-xs">
+                                      <div className="font-bold truncate">{channel.name}</div>
+                                      <div className="flex justify-between items-center mt-1">
+                                        <span className="text-muted-foreground">Price:</span>
+                                        <span className="font-bold">{channel.price.toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Profit:</span>
+                                        <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
+                                          {channel.profit.toLocaleString()} ({channel.marginPercent}%)
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-2">
