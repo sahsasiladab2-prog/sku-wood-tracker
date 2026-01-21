@@ -1,11 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { WoodItem, woodData as initialWoodData } from "@/lib/woodData";
 
+interface DefaultLaborCosts {
+  carpenter: number;
+  painting: number;
+  packing: number;
+}
+
 interface CustomDataContextType {
   materials: WoodItem[];
   usages: string[];
+  defaultLaborCosts: DefaultLaborCosts;
   addMaterial: (material: WoodItem) => void;
   addUsage: (usage: string) => void;
+  updateDefaultLaborCosts: (costs: DefaultLaborCosts) => void;
 }
 
 const CustomDataContext = createContext<CustomDataContextType | undefined>(undefined);
@@ -23,6 +31,12 @@ export function CustomDataProvider({ children }: { children: React.ReactNode }) 
     return saved ? JSON.parse(saved) : ["Leg", "Top", "Frame", "Shelf", "Door", "Drawer"];
   });
 
+  // Default Labor Costs State
+  const [defaultLaborCosts, setDefaultLaborCosts] = useState<DefaultLaborCosts>(() => {
+    const saved = localStorage.getItem("sku-default-labor-costs");
+    return saved ? JSON.parse(saved) : { carpenter: 0, painting: 0, packing: 20 };
+  });
+
   // Persist Custom Materials (Only the new ones)
   useEffect(() => {
     const customOnly = materials.filter(m => !initialWoodData.some(i => i.code === m.code));
@@ -33,6 +47,11 @@ export function CustomDataProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     localStorage.setItem("sku-custom-usages", JSON.stringify(usages));
   }, [usages]);
+
+  // Persist Default Labor Costs
+  useEffect(() => {
+    localStorage.setItem("sku-default-labor-costs", JSON.stringify(defaultLaborCosts));
+  }, [defaultLaborCosts]);
 
   const addMaterial = (material: WoodItem) => {
     setMaterials(prev => {
@@ -48,8 +67,12 @@ export function CustomDataProvider({ children }: { children: React.ReactNode }) 
     });
   };
 
+  const updateDefaultLaborCosts = (costs: DefaultLaborCosts) => {
+    setDefaultLaborCosts(costs);
+  };
+
   return (
-    <CustomDataContext.Provider value={{ materials, usages, addMaterial, addUsage }}>
+    <CustomDataContext.Provider value={{ materials, usages, defaultLaborCosts, addMaterial, addUsage, updateDefaultLaborCosts }}>
       {children}
     </CustomDataContext.Provider>
   );

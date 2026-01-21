@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Settings } from "lucide-react";
 
 interface SelectedWood extends WoodItem {
   quantity: number;
@@ -29,12 +31,38 @@ interface SelectedWood extends WoodItem {
 
 export default function Calculator() {
   const [location, setLocation] = useLocation();
-  const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
+  const { projects, addProject, updateProject, getProjectVersion } = useProjects();
+  const { materials: woodData, usages, defaultLaborCosts, addMaterial, addUsage, updateDefaultLaborCosts } = useCustomData();
   
+  const [selectedWoods, setSelectedWoods] = useState<SelectedWood[]>([]);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string>("");
+  const [projectVersion, setProjectVersion] = useState<number>(1);
+  const [projectNote, setProjectNote] = useState<string>("");
+
   // Costs
-  const [carpenterCost, setCarpenterCost] = useState<number>(0);
-  const [paintingCost, setPaintingCost] = useState<number>(0);
-  const [packingCost, setPackingCost] = useState<number>(20); // Default 20 THB
+  const [carpenterCost, setCarpenterCost] = useState<number>(defaultLaborCosts.carpenter);
+  const [paintingCost, setPaintingCost] = useState<number>(defaultLaborCosts.painting);
+  const [packingCost, setPackingCost] = useState<number>(defaultLaborCosts.packing);
+
+  // Settings Dialog State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempDefaultCosts, setTempDefaultCosts] = useState(defaultLaborCosts);
+
+  // Update local costs when default costs change (only if not editing an existing project)
+  useEffect(() => {
+    if (!editingProjectId) {
+      setCarpenterCost(defaultLaborCosts.carpenter);
+      setPaintingCost(defaultLaborCosts.painting);
+      setPackingCost(defaultLaborCosts.packing);
+    }
+  }, [defaultLaborCosts, editingProjectId]);
+
+  const handleSaveSettings = () => {
+    updateDefaultLaborCosts(tempDefaultCosts);
+    setIsSettingsOpen(false);
+    toast.success("Default labor costs updated!");
+  };
   
   // Percentages
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
@@ -44,13 +72,6 @@ export default function Calculator() {
   const [channels, setChannels] = useState<{ id: string; name: string; price: number; feePercent: number }[]>([
     { id: "default", name: "Default Price", price: 0, feePercent: 0 }
   ]);
-
-  const { projects, addProject, updateProject, getProjectVersion } = useProjects();
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const { materials: woodData, usages, addMaterial, addUsage } = useCustomData();
-  const [projectName, setProjectName] = useState<string>("");
-  const [projectVersion, setProjectVersion] = useState<number>(1);
-  const [projectNote, setProjectNote] = useState<string>("");
 
   // Custom Item Input State
   const [isCustomOpen, setIsCustomOpen] = useState(false);
@@ -308,12 +329,74 @@ export default function Calculator() {
             Calculate costs, add margins, and get rich!
           </p>
         </div>
-        <Button 
-          onClick={handleSaveProject}
-          className="w-full md:w-auto neo-button bg-chart-4 text-white hover:bg-emerald-600 h-12 px-6 text-lg"
-        >
-          <Save className="mr-2 h-5 w-5" /> Save Project
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex-1 md:flex-none neo-button bg-white text-black hover:bg-gray-100 h-12 px-4"
+                onClick={() => setTempDefaultCosts(defaultLaborCosts)}
+              >
+                <Settings className="mr-2 h-5 w-5" /> Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_#000000]">
+              <DialogHeader>
+                <DialogTitle className="font-heading uppercase text-xl">Default Labor Costs</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="def-carpenter" className="text-right font-bold uppercase">
+                    Carpenter
+                  </Label>
+                  <Input
+                    id="def-carpenter"
+                    type="number"
+                    value={tempDefaultCosts.carpenter}
+                    onChange={(e) => setTempDefaultCosts({ ...tempDefaultCosts, carpenter: Number(e.target.value) })}
+                    className="col-span-3 neo-input"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="def-painting" className="text-right font-bold uppercase">
+                    Painting
+                  </Label>
+                  <Input
+                    id="def-painting"
+                    type="number"
+                    value={tempDefaultCosts.painting}
+                    onChange={(e) => setTempDefaultCosts({ ...tempDefaultCosts, painting: Number(e.target.value) })}
+                    className="col-span-3 neo-input"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="def-packing" className="text-right font-bold uppercase">
+                    Packing
+                  </Label>
+                  <Input
+                    id="def-packing"
+                    type="number"
+                    value={tempDefaultCosts.packing}
+                    onChange={(e) => setTempDefaultCosts({ ...tempDefaultCosts, packing: Number(e.target.value) })}
+                    className="col-span-3 neo-input"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleSaveSettings} className="neo-button bg-black text-white hover:bg-gray-800 w-full">
+                  Save Defaults
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Button 
+            onClick={handleSaveProject}
+            className="flex-1 md:flex-none neo-button bg-chart-4 text-white hover:bg-emerald-600 h-12 px-6 text-lg"
+          >
+            <Save className="mr-2 h-5 w-5" /> Save Project
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
