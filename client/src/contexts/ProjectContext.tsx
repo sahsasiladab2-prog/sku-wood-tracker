@@ -58,7 +58,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const existingProjects = projects.filter(
       (p) => p.name.toLowerCase() === name.toLowerCase()
     );
-    return existingProjects.length + 1;
+    
+    if (existingProjects.length === 0) return 1;
+
+    // Find the highest version number
+    const maxVersion = Math.max(...existingProjects.map(p => p.version));
+    return maxVersion + 1;
   };
 
   return (
