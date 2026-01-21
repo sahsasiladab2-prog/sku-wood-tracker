@@ -34,7 +34,7 @@ export default function Calculator() {
   // Costs
   const [carpenterCost, setCarpenterCost] = useState<number>(0);
   const [paintingCost, setPaintingCost] = useState<number>(0);
-  const [packingCost, setPackingCost] = useState<number>(0);
+  const [packingCost, setPackingCost] = useState<number>(20); // Default 20 THB
   
   // Percentages
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
