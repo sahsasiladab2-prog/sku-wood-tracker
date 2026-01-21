@@ -252,7 +252,19 @@ export default function Calculator() {
 
   const updateChannel = (index: number, field: keyof typeof channels[0], value: any) => {
     const newChannels = [...channels];
-    newChannels[index] = { ...newChannels[index], [field]: value };
+    
+    if (field === "name") {
+      const nameVal = String(value);
+      newChannels[index] = { ...newChannels[index], name: nameVal };
+      
+      // Auto-set fee for Shopee (starts with "Sp.")
+      if (nameVal.toLowerCase().startsWith("sp.")) {
+        newChannels[index].feePercent = 27.61;
+      }
+    } else {
+      newChannels[index] = { ...newChannels[index], [field]: value };
+    }
+    
     setChannels(newChannels);
   };
 
