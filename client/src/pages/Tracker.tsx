@@ -196,6 +196,14 @@ export default function Tracker() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-bold text-lg">Total Cost: {version.totalCost.toLocaleString()} THB</span>
                               
+                              {/* Margin Badge */}
+                              <Badge className={cn(
+                                "border-none font-bold text-white",
+                                version.margin >= 30 ? "bg-green-500" : version.margin >= 15 ? "bg-yellow-500" : "bg-red-500"
+                              )}>
+                                Margin: {version.margin}%
+                              </Badge>
+
                               {/* Compare with Previous Version */}
                               {diff && (
                                 <Badge className={cn(
