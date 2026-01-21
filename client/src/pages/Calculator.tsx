@@ -516,20 +516,32 @@ export default function Calculator() {
                       />
                       <div className="relative">
                         <Input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           placeholder="Cost" 
-                          value={customCost || ""} 
-                          onChange={(e) => setCustomCost(parseFloat(e.target.value))}
+                          value={customCost === 0 ? "" : customCost} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "" || /^\d+(\.\d*)?$/.test(val)) {
+                              setCustomCost(Number(val));
+                            }
+                          }}
                           className="bg-white border-black pr-8"
                         />
                         <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">THB</span>
                       </div>
                       <div className="relative">
                         <Input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           placeholder="Ref Length" 
-                          value={customRefQty || ""} 
-                          onChange={(e) => setCustomRefQty(parseFloat(e.target.value))}
+                          value={customRefQty === 0 ? "" : customRefQty} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "" || /^\d+(\.\d*)?$/.test(val)) {
+                              setCustomRefQty(Number(val));
+                            }
+                          }}
                           className="bg-white border-black pr-8"
                         />
                         <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">cm</span>
@@ -582,10 +594,15 @@ export default function Calculator() {
                         </TableCell>
                             <TableCell>
                               <Input 
-                                type="number" 
-                                min="1"
-                                value={item.usedLength}
-                                onChange={(e) => updateItem(index, "usedLength", parseInt(e.target.value) || 1)}
+                                type="text" 
+                                inputMode="numeric"
+                                value={item.usedLength === 0 ? "" : item.usedLength}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "" || /^\d+$/.test(val)) {
+                                    updateItem(index, "usedLength", Number(val));
+                                  }
+                                }}
                                 className="h-8 border-black/50 text-center font-bold"
                               />
                             </TableCell>
@@ -593,13 +610,18 @@ export default function Calculator() {
                               {item.calculatedCost}
                             </TableCell>
                             <TableCell>
-                              <Input 
-                                type="number" 
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
-                                className="h-8 border-2 border-black text-center font-bold bg-white"
-                              />
+<Input 
+                              type="text" 
+                              inputMode="numeric"
+                              value={item.quantity === 0 ? "" : item.quantity}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || /^\d+$/.test(val)) {
+                                  updateItem(index, "quantity", Number(val));
+                                }
+                              }}
+                              className="h-8 border-black text-center font-bold bg-white text-sm"
+                            />
                             </TableCell>
                             <TableCell className="text-right font-bold">
                               {(item.calculatedCost * item.quantity).toLocaleString()}
@@ -651,22 +673,32 @@ export default function Calculator() {
                           <div>
                             <Label className="text-[10px] uppercase text-muted-foreground">Length (cm)</Label>
                             <Input 
-                              type="number" 
-                              min="1"
-                              value={item.usedLength}
-                              onChange={(e) => updateItem(index, "usedLength", parseInt(e.target.value) || 1)}
+                              type="text" 
+                              inputMode="numeric"
+                              value={item.usedLength === 0 ? "" : item.usedLength}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || /^\d+$/.test(val)) {
+                                  updateItem(index, "usedLength", Number(val));
+                                }
+                              }}
                               className="h-8 border-black text-center font-bold bg-white text-sm"
                             />
                           </div>
                           <div>
                             <Label className="text-[10px] uppercase text-muted-foreground">Qty</Label>
-                            <Input 
-                              type="number" 
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
-                              className="h-8 border-black text-center font-bold bg-white text-sm"
-                            />
+<Input 
+                                type="text" 
+                                inputMode="numeric"
+                                value={item.quantity === 0 ? "" : item.quantity}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "" || /^\d+$/.test(val)) {
+                                    updateItem(index, "quantity", Number(val));
+                                  }
+                                }}
+                                className="h-8 border-black/50 text-center font-bold"
+                              />
                           </div>
                           <div className="text-right">
                             <Label className="text-[10px] uppercase text-muted-foreground">Total</Label>
