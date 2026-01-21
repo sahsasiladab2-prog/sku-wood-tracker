@@ -291,9 +291,9 @@ export default function Calculator() {
                       id="projectVersion" 
                       type="number"
                       min="1"
-                      className="neo-input h-12 text-lg font-bold pl-8 text-center bg-gray-50"
+                      className="neo-input h-12 text-lg font-bold pl-8 text-center bg-white"
                       value={projectVersion}
-                      readOnly
+                      onChange={(e) => setProjectVersion(Math.max(1, parseInt(e.target.value) || 1))}
                     />
                   </div>
                 </div>
