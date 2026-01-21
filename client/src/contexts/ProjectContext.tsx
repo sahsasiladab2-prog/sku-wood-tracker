@@ -5,6 +5,7 @@ export interface ChannelPricing {
   id: string;
   name: string; // e.g., "Shopee A", "Lazada", "Retail"
   price: number;
+  feePercent: number; // Platform fee percentage
   profit: number;
   marginPercent: number;
 }

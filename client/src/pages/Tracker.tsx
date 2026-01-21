@@ -229,21 +229,38 @@ export default function Tracker() {
                                   <span className="text-xs font-bold uppercase text-purple-600">Sales Channels</span>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  {version.channels.map((channel) => (
-                                    <div key={channel.id} className="bg-purple-50 border border-purple-200 p-2 rounded text-xs">
-                                      <div className="font-bold truncate">{channel.name}</div>
-                                      <div className="flex justify-between items-center mt-1">
-                                        <span className="text-muted-foreground">Price:</span>
-                                        <span className="font-bold">{channel.price.toLocaleString()}</span>
+                                  {version.channels.map((channel) => {
+                                    // Recalculate net profit if feePercent exists (for backward compatibility or display logic)
+                                    // Note: channel.profit should already be net profit from Calculator logic, 
+                                    // but let's display the breakdown if possible or just the net result.
+                                    // The saved 'profit' in DB is already Net Profit based on Calculator logic update.
+                                    
+                                    return (
+                                      <div key={channel.id} className="bg-purple-50 border border-purple-200 p-2 rounded text-xs">
+                                        <div className="font-bold truncate mb-1">{channel.name}</div>
+                                        <div className="space-y-0.5">
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-muted-foreground">Price:</span>
+                                            <span className="font-bold">{channel.price.toLocaleString()}</span>
+                                          </div>
+                                          {channel.feePercent > 0 && (
+                                            <div className="flex justify-between items-center text-red-500/80">
+                                              <span className="text-[10px]">Fee ({channel.feePercent}%):</span>
+                                              <span className="font-bold text-[10px]">
+                                                -{Math.ceil(channel.price * (channel.feePercent / 100)).toLocaleString()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          <div className="flex justify-between items-center pt-1 mt-1 border-t border-purple-200">
+                                            <span className="text-muted-foreground font-bold">Net Profit:</span>
+                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
+                                              {channel.profit.toLocaleString()} ({channel.marginPercent}%)
+                                            </span>
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">Profit:</span>
-                                        <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
-                                          {channel.profit.toLocaleString()} ({channel.marginPercent}%)
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
