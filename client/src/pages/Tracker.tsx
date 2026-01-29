@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -14,8 +17,51 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 
 export default function Tracker() {
-  const { projects, deleteProject } = useProjects();
+  const { projects, deleteProject, updateProject } = useProjects();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  
+  // Manage Prices State
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [selectedVersionForPrice, setSelectedVersionForPrice] = useState<typeof projects[0] | null>(null);
+  const [tempChannels, setTempChannels] = useState<{ id: string; name: string; price: number; feePercent: number; profit: number; marginPercent: number }[]>([]);
+
+  const openPriceModal = (version: typeof projects[0]) => {
+    setSelectedVersionForPrice(version);
+    // Deep copy channels to temp state
+    setTempChannels(version.channels ? JSON.parse(JSON.stringify(version.channels)) : []);
+    setIsPriceModalOpen(true);
+  };
+
+  const handlePriceChange = (index: number, field: 'price' | 'feePercent', value: number) => {
+    const newChannels = [...tempChannels];
+    newChannels[index][field] = value;
+    
+    // Recalculate profit and margin
+    // Note: We need totalCost from the version to recalculate
+    if (selectedVersionForPrice) {
+      const totalCost = selectedVersionForPrice.totalCost;
+      const price = newChannels[index].price;
+      const fee = Math.ceil(price * (newChannels[index].feePercent / 100));
+      const netProfit = price - totalCost - fee;
+      const margin = Math.round((netProfit / price) * 100) || 0;
+      
+      newChannels[index].profit = netProfit;
+      newChannels[index].marginPercent = margin;
+    }
+    
+    setTempChannels(newChannels);
+  };
+
+  const savePrices = () => {
+    if (selectedVersionForPrice) {
+      updateProject(selectedVersionForPrice.id, {
+        ...selectedVersionForPrice,
+        channels: tempChannels
+      });
+      toast.success("Prices updated successfully!");
+      setIsPriceModalOpen(false);
+    }
+  };
 
   // Group projects by name
   const groupedProjects = projects.reduce((acc, project) => {
@@ -280,13 +326,32 @@ export default function Tracker() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-bold text-lg">Total Cost: {version.totalCost.toLocaleString()} THB</span>
                               
-                              {/* Margin Badge */}
-                              <Badge className={cn(
-                                "border-none font-bold text-white",
-                                version.margin >= 30 ? "bg-green-500" : version.margin >= 15 ? "bg-yellow-500" : "bg-red-500"
-                              )}>
-                                Margin: {version.margin}%
-                              </Badge>
+                              {/* Margin Badge - Show Real Profit from Channels if Target Margin is 0 */}
+                              {version.margin > 0 ? (
+                                <Badge className={cn(
+                                  "border-none font-bold text-white",
+                                  version.margin >= 30 ? "bg-green-500" : version.margin >= 15 ? "bg-yellow-500" : "bg-red-500"
+                                )}>
+                                  Target Margin: {version.margin}%
+                                </Badge>
+                              ) : (
+                                <div className="flex gap-1">
+                                  {version.channels && version.channels.length > 0 ? (
+                                    [...version.channels]
+                                      .sort((a, b) => b.marginPercent - a.marginPercent) // Sort by margin descending
+                                      .map((ch, idx) => (
+                                        <Badge key={idx} className={cn(
+                                          "border-none font-bold text-white",
+                                          ch.marginPercent >= 30 ? "bg-green-500" : ch.marginPercent >= 15 ? "bg-yellow-500" : "bg-red-500"
+                                        )}>
+                                          {ch.marginPercent}% ({ch.name})
+                                        </Badge>
+                                      ))
+                                  ) : (
+                                    <Badge className="bg-gray-400 text-white border-none">No Margin Data</Badge>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Compare with Previous Version */}
                               {diff && (
@@ -359,6 +424,14 @@ export default function Tracker() {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-purple-600 hover:text-white transition-colors"
+                              onClick={() => openPriceModal(version)}
+                            >
+                              <Tag className="w-3 h-3 mr-1" /> Manage Prices
+                            </Button>
                              <Link href={`/calculator?edit=${version.id}`}>
                               <Button variant="outline" size="sm" className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-chart-1 hover:text-white transition-colors">
                                 <Edit className="w-3 h-3 mr-1" /> Edit
@@ -389,6 +462,65 @@ export default function Tracker() {
           );
         })}
       </div>
+
+      {/* Manage Prices Modal */}
+      <Dialog open={isPriceModalOpen} onOpenChange={setIsPriceModalOpen}>
+        <DialogContent className="max-w-md md:max-w-lg bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <Tag className="w-5 h-5" /> Manage Prices (v.{selectedVersionForPrice?.version})
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-100 p-3 rounded border border-gray-300 text-sm">
+              <span className="font-bold">Total Cost:</span> {selectedVersionForPrice?.totalCost.toLocaleString()} THB
+            </div>
+            
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {tempChannels.map((channel, index) => (
+                <div key={index} className="border border-black/20 p-3 rounded bg-gray-50 space-y-3">
+                  <div className="font-bold text-sm uppercase text-purple-700">{channel.name}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Selling Price</Label>
+                      <Input 
+                        type="number" 
+                        value={channel.price} 
+                        onChange={(e) => handlePriceChange(index, 'price', Number(e.target.value))}
+                        className="h-8 bg-white border-black/30"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Fee %</Label>
+                      <Input 
+                        type="number" 
+                        value={channel.feePercent} 
+                        onChange={(e) => handlePriceChange(index, 'feePercent', Number(e.target.value))}
+                        className="h-8 bg-white border-black/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-2 border-t border-black/10">
+                    <span>Net Profit:</span>
+                    <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
+                      {channel.profit.toLocaleString()} THB ({channel.marginPercent}%)
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {tempChannels.length === 0 && (
+                <div className="text-center text-muted-foreground py-4">No channels defined. Edit project to add channels.</div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPriceModalOpen(false)} className="border-black">Cancel</Button>
+            <Button onClick={savePrices} className="bg-black text-white hover:bg-gray-800">Save Prices</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
