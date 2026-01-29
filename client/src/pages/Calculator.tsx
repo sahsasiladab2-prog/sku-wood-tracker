@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search, Store } from "lucide-react";
+import { Trash2, Plus, Minus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search, Store } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Settings } from "lucide-react";
 
 interface SelectedWood extends WoodItem {
-  quantity: number;
+  quantity: number | ""; // Allow empty string for initial state
   usage: string; // e.g., "Table Leg", "Top"
   usedLength: number; // Length used in cm
   calculatedCost: number; // Cost based on used length
@@ -151,7 +151,7 @@ export default function Calculator() {
       // Default used length is the reference length
       setSelectedWoods([...selectedWoods, { 
         ...wood, 
-        quantity: 1, 
+        quantity: "", // Start with empty quantity
         usage: "", 
         usedLength: wood.refQty,
         calculatedCost: wood.cost 
@@ -179,8 +179,8 @@ export default function Calculator() {
 
     const newItem: SelectedWood = {
       ...newMaterial,
-      quantity: 1,
-      usage: "",
+      quantity: "", // Start with empty quantity
+      usage: "", 
       usedLength: customRefQty,
       calculatedCost: customCost,
       isCustom: true
@@ -202,7 +202,12 @@ export default function Calculator() {
     const item = newWoods[index];
 
     if (field === "quantity") {
-      item.quantity = Math.max(1, Math.ceil(value));
+      // Allow setting to empty string or number
+      if (value === "") {
+        item.quantity = "";
+      } else {
+        item.quantity = Math.max(1, Math.ceil(Number(value)));
+      }
     } else if (field === "usage") {
       item.usage = value;
       if (value) addUsage(value);
@@ -224,7 +229,7 @@ export default function Calculator() {
   };
 
   // Calculation Logic (All Integers, Round Up)
-  const totalWoodCost = selectedWoods.reduce((sum, item) => sum + (item.calculatedCost * item.quantity), 0);
+  const totalWoodCost = selectedWoods.reduce((sum, item) => sum + (item.calculatedCost * (typeof item.quantity === 'number' ? item.quantity : 0)), 0);
   const wasteCost = Math.ceil(totalWoodCost * (wastePercentage / 100));
   const totalMaterialCost = totalWoodCost + wasteCost;
   
@@ -622,21 +627,47 @@ export default function Calculator() {
                               {item.calculatedCost}
                             </TableCell>
                             <TableCell>
-<Input 
-                              type="text" 
-                              inputMode="numeric"
-                              value={item.quantity === 0 ? "" : item.quantity}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "" || /^\d+$/.test(val)) {
-                                  updateItem(index, "quantity", Number(val));
-                                }
-                              }}
-                              className="h-8 border-black text-center font-bold bg-white text-sm"
-                            />
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 p-0 border-black hover:bg-gray-100"
+                                  onClick={() => {
+                                    const currentQty = typeof item.quantity === 'number' ? item.quantity : 0;
+                                    if (currentQty > 1) updateItem(index, "quantity", currentQty - 1);
+                                  }}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <Input 
+                                  type="text" 
+                                  inputMode="numeric"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "") {
+                                      updateItem(index, "quantity", "");
+                                    } else if (/^\d+$/.test(val)) {
+                                      updateItem(index, "quantity", Number(val));
+                                    }
+                                  }}
+                                  className="h-8 w-12 border-black text-center font-bold bg-white text-sm px-1"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 p-0 border-black hover:bg-gray-100"
+                                  onClick={() => {
+                                    const currentQty = typeof item.quantity === 'number' ? item.quantity : 0;
+                                    updateItem(index, "quantity", currentQty + 1);
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right font-bold">
-                              {(item.calculatedCost * item.quantity).toLocaleString()}
+                              {(item.calculatedCost * (typeof item.quantity === 'number' ? item.quantity : 0)).toLocaleString()}
                             </TableCell>
                             <TableCell>
                               <Button 
@@ -699,23 +730,49 @@ export default function Calculator() {
                           </div>
                           <div>
                             <Label className="text-[10px] uppercase text-muted-foreground">Qty</Label>
-<Input 
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 p-0 border-black hover:bg-gray-100 flex-shrink-0"
+                                onClick={() => {
+                                  const currentQty = typeof item.quantity === 'number' ? item.quantity : 0;
+                                  if (currentQty > 1) updateItem(index, "quantity", currentQty - 1);
+                                }}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <Input 
                                 type="text" 
                                 inputMode="numeric"
-                                value={item.quantity === 0 ? "" : item.quantity}
+                                value={item.quantity}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  if (val === "" || /^\d+$/.test(val)) {
+                                  if (val === "") {
+                                    updateItem(index, "quantity", "");
+                                  } else if (/^\d+$/.test(val)) {
                                     updateItem(index, "quantity", Number(val));
                                   }
                                 }}
-                                className="h-8 border-black/50 text-center font-bold"
+                                className="h-8 border-black/50 text-center font-bold px-1"
                               />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 p-0 border-black hover:bg-gray-100 flex-shrink-0"
+                                onClick={() => {
+                                  const currentQty = typeof item.quantity === 'number' ? item.quantity : 0;
+                                  updateItem(index, "quantity", currentQty + 1);
+                                }}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="text-right">
                             <Label className="text-[10px] uppercase text-muted-foreground">Total</Label>
                             <div className="font-black text-lg leading-8">
-                              {(item.calculatedCost * item.quantity).toLocaleString()}
+                              {(item.calculatedCost * (typeof item.quantity === 'number' ? item.quantity : 0)).toLocaleString()}
                             </div>
                           </div>
                         </div>
