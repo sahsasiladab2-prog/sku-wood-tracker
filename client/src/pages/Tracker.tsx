@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 
 
@@ -32,6 +33,37 @@ export default function Tracker() {
 
   const toggleGroup = (name: string) => {
     setExpandedGroup(expandedGroup === name ? null : name);
+  };
+
+  const exportToCSV = (name: string, versions: typeof projects) => {
+    // Prepare CSV data
+    const headers = ["Version", "Date", "Total Cost", "Margin %", "Selling Price", "Profit", "Note"];
+    const rows = versions.map(v => [
+      `v.${v.version}`,
+      new Date(v.updatedAt).toLocaleDateString('th-TH'),
+      v.totalCost,
+      v.margin,
+      v.sellingPrice,
+      v.sellingPrice - v.totalCost,
+      `"${v.note || ''}"`
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${name}_history.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${name} history to CSV`);
   };
 
   const calculateCostDiff = (current: typeof projects[0], previous: typeof projects[0] | undefined) => {
@@ -172,6 +204,58 @@ export default function Tracker() {
               {/* Versions List (Collapsible) */}
               {isExpanded && (
                 <div className="border-t-2 border-black bg-gray-50 p-4 space-y-4">
+                  
+                  {/* Profit Trend Chart & Actions */}
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="flex-1 bg-white border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-heading text-sm font-bold uppercase flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-chart-2" /> Profit Trend
+                        </h4>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => exportToCSV(name, groupVersions)}
+                          className="h-7 text-xs font-bold uppercase border-black hover:bg-black hover:text-white"
+                        >
+                          <Download className="w-3 h-3 mr-1" /> Export CSV
+                        </Button>
+                      </div>
+                      <div className="h-[200px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={[...groupVersions].reverse()}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              dataKey="version" 
+                              tickFormatter={(v) => `v.${v}`}
+                              stroke="#000"
+                              fontSize={10}
+                              tickMargin={10}
+                            />
+                            <YAxis 
+                              stroke="#000" 
+                              fontSize={10}
+                              tickFormatter={(val) => `${val}%`}
+                            />
+                            <Tooltip 
+                              contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
+                              labelFormatter={(v) => `Version ${v}`}
+                            />
+                            <ReferenceLine y={30} stroke="green" strokeDasharray="3 3" label={{ value: 'Target (30%)', position: 'insideTopRight', fill: 'green', fontSize: 10 }} />
+                            <Line 
+                              type="monotone" 
+                              dataKey="margin" 
+                              stroke="#ec4899" 
+                              strokeWidth={3}
+                              dot={{ r: 4, fill: "#ec4899", stroke: "#000", strokeWidth: 2 }}
+                              activeDot={{ r: 6, stroke: "#000", strokeWidth: 2 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
                   <h4 className="font-heading text-sm font-bold uppercase flex items-center gap-2 text-muted-foreground mb-2">
                     <History className="w-4 h-4" /> Version History
                   </h4>
