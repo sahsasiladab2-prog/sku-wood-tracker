@@ -12,7 +12,8 @@ import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDow
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Slider } from "@/components/ui/slider";
 
 
 
@@ -24,6 +25,19 @@ export default function Tracker() {
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [selectedVersionForPrice, setSelectedVersionForPrice] = useState<typeof projects[0] | null>(null);
   const [tempChannels, setTempChannels] = useState<{ id: string; name: string; price: number; feePercent: number; profit: number; marginPercent: number }[]>([]);
+
+  // Simulator State
+  const [isSimModalOpen, setIsSimModalOpen] = useState(false);
+  const [selectedVersionForSim, setSelectedVersionForSim] = useState<typeof projects[0] | null>(null);
+  const [simCostMultiplier, setSimCostMultiplier] = useState(100); // 100%
+  const [simPriceMultiplier, setSimPriceMultiplier] = useState(100); // 100%
+
+  const openSimModal = (version: typeof projects[0]) => {
+    setSelectedVersionForSim(version);
+    setSimCostMultiplier(100);
+    setSimPriceMultiplier(100);
+    setIsSimModalOpen(true);
+  };
 
   const openPriceModal = (version: typeof projects[0]) => {
     setSelectedVersionForPrice(version);
@@ -428,6 +442,14 @@ export default function Tracker() {
                             <Button 
                               variant="outline" 
                               size="sm" 
+                              className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-blue-600 hover:text-white transition-colors"
+                              onClick={() => openSimModal(version)}
+                            >
+                              <Zap className="w-3 h-3 mr-1" /> Simulator
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
                               className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-purple-600 hover:text-white transition-colors"
                               onClick={() => openPriceModal(version)}
                             >
@@ -463,6 +485,151 @@ export default function Tracker() {
           );
         })}
       </div>
+
+      {/* Simulator & Cost Analysis Modal */}
+      <Dialog open={isSimModalOpen} onOpenChange={setIsSimModalOpen}>
+        <DialogContent className="max-w-3xl bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <Zap className="w-5 h-5 text-chart-4" /> Cost Analysis & Profit Simulator (v.{selectedVersionForSim?.version})
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedVersionForSim && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              {/* Left: Cost Breakdown */}
+              <div className="space-y-4">
+                <h3 className="font-bold uppercase text-sm border-b-2 border-black pb-1">Cost Breakdown</h3>
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Materials', value: selectedVersionForSim.totalCost - (selectedVersionForSim.costs.carpenter + selectedVersionForSim.costs.painting + selectedVersionForSim.costs.packing) },
+                          { name: 'Carpenter', value: selectedVersionForSim.costs.carpenter },
+                          { name: 'Painting', value: selectedVersionForSim.costs.painting },
+                          { name: 'Packing', value: selectedVersionForSim.costs.packing },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        <Cell fill="#e76e50" /> {/* Materials - chart-1 */}
+                        <Cell fill="#2a9d8f" /> {/* Carpenter - chart-2 */}
+                        <Cell fill="#e9c46a" /> {/* Painting - chart-3 */}
+                        <Cell fill="#264653" /> {/* Packing - chart-5 */}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `${value.toLocaleString()} THB`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-gray-100 p-2 rounded">
+                    <span className="block text-muted-foreground">Total Cost</span>
+                    <span className="font-bold text-lg">{selectedVersionForSim.totalCost.toLocaleString()}</span>
+                  </div>
+                  <div className="bg-gray-100 p-2 rounded">
+                    <span className="block text-muted-foreground">Material Cost</span>
+                    <span className="font-bold text-lg">{(selectedVersionForSim.totalCost - (selectedVersionForSim.costs.carpenter + selectedVersionForSim.costs.painting + selectedVersionForSim.costs.packing)).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Simulator */}
+              <div className="space-y-6 bg-gray-50 p-4 rounded border border-black/10">
+                <h3 className="font-bold uppercase text-sm border-b-2 border-black pb-1 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> Profit Simulator
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <Label>Cost Adjustment</Label>
+                      <span className={cn("font-bold", simCostMultiplier > 100 ? "text-red-500" : "text-green-500")}>
+                        {simCostMultiplier}% ({Math.ceil(selectedVersionForSim.totalCost * (simCostMultiplier/100)).toLocaleString()} THB)
+                      </span>
+                    </div>
+                    <Slider 
+                      value={[simCostMultiplier]} 
+                      min={50} 
+                      max={150} 
+                      step={5} 
+                      onValueChange={(val) => setSimCostMultiplier(val[0])}
+                      className="py-2"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Adjust total cost from 50% to 150%</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <Label>Selling Price Adjustment</Label>
+                      <span className={cn("font-bold", simPriceMultiplier > 100 ? "text-green-500" : "text-red-500")}>
+                        {simPriceMultiplier}%
+                      </span>
+                    </div>
+                    <Slider 
+                      value={[simPriceMultiplier]} 
+                      min={50} 
+                      max={150} 
+                      step={5} 
+                      onValueChange={(val) => setSimPriceMultiplier(val[0])}
+                      className="py-2"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Adjust selling price from 50% to 150%</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-black/10 space-y-3">
+                  <h4 className="font-bold text-xs uppercase text-muted-foreground">Simulated Results (Top Channel)</h4>
+                  {(() => {
+                    const simulatedCost = Math.ceil(selectedVersionForSim.totalCost * (simCostMultiplier/100));
+                    // Use the best channel for simulation
+                    const bestChannel = selectedVersionForSim.channels && selectedVersionForSim.channels.length > 0 
+                      ? [...selectedVersionForSim.channels].sort((a, b) => b.marginPercent - a.marginPercent)[0]
+                      : { name: "Default", price: selectedVersionForSim.sellingPrice, feePercent: 0 };
+                    
+                    const simulatedPrice = Math.ceil(bestChannel.price * (simPriceMultiplier/100));
+                    const fee = Math.ceil(simulatedPrice * (bestChannel.feePercent / 100));
+                    const netProfit = simulatedPrice - simulatedCost - fee;
+                    const margin = simulatedPrice > 0 ? parseFloat(((netProfit / simulatedPrice) * 100).toFixed(1)) : 0;
+
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Channel:</span>
+                          <span className="font-bold text-sm">{bestChannel.name}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Simulated Price:</span>
+                          <span className="font-bold text-sm">{simulatedPrice.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-white p-2 border border-black/10 rounded">
+                          <span className="text-sm font-bold">Net Profit:</span>
+                          <div className="text-right">
+                            <span className={cn("block font-bold text-lg", netProfit >= 0 ? "text-green-600" : "text-red-600")}>
+                              {netProfit.toLocaleString()} THB
+                            </span>
+                            <span className={cn("text-xs font-bold", margin >= 30 ? "text-green-600" : margin >= 15 ? "text-yellow-600" : "text-red-600")}>
+                              {margin}% Margin
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsSimModalOpen(false)} className="w-full bg-black text-white hover:bg-gray-800">Close Simulator</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Manage Prices Modal */}
       <Dialog open={isPriceModalOpen} onOpenChange={setIsPriceModalOpen}>
