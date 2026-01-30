@@ -288,7 +288,8 @@ export default function Calculator() {
       const feeAmount = Math.ceil(c.price * (c.feePercent / 100));
       const netPrice = c.price - feeAmount;
       const channelProfit = netPrice - totalCost;
-      const channelMargin = totalCost > 0 ? (channelProfit / totalCost) * 100 : 0;
+      // Net Profit Margin = (Net Profit / Selling Price) * 100
+      const channelMargin = c.price > 0 ? (channelProfit / c.price) * 100 : 0;
       return {
         ...c,
         profit: channelProfit,

@@ -43,7 +43,8 @@ export default function Tracker() {
       const price = newChannels[index].price;
       const fee = Math.ceil(price * (newChannels[index].feePercent / 100));
       const netProfit = price - totalCost - fee;
-      const margin = Math.round((netProfit / price) * 100) || 0;
+      // Net Profit Margin = (Net Profit / Selling Price) * 100
+      const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
       
       newChannels[index].profit = netProfit;
       newChannels[index].marginPercent = margin;
