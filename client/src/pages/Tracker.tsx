@@ -351,7 +351,8 @@ export default function Tracker() {
                                   Target Margin: {version.margin}%
                                 </Badge>
                               ) : (
-                                <div className="flex gap-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-bold text-muted-foreground mr-1">Net Margin:</span>
                                   {version.channels && version.channels.length > 0 ? (
                                     [...version.channels]
                                       .sort((a, b) => {
