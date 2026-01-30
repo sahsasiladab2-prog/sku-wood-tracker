@@ -41,7 +41,7 @@ export default function Calculator() {
   const [projectNote, setProjectNote] = useState<string>("");
 
   // Costs
-  const [carpenterCost, setCarpenterCost] = useState<number>(defaultLaborCosts.carpenter);
+  const [carpenterCost, setCarpenterCost] = useState<number | "">("");
   const [paintingCost, setPaintingCost] = useState<number>(defaultLaborCosts.painting);
   const [packingCost, setPackingCost] = useState<number>(defaultLaborCosts.packing);
 
@@ -52,7 +52,7 @@ export default function Calculator() {
   // Update local costs when default costs change (only if not editing an existing project)
   useEffect(() => {
     if (!editingProjectId) {
-      setCarpenterCost(defaultLaborCosts.carpenter);
+      setCarpenterCost("");
       setPaintingCost(defaultLaborCosts.painting);
       setPackingCost(defaultLaborCosts.packing);
     }
@@ -66,7 +66,7 @@ export default function Calculator() {
   
   // Percentages
   const [wastePercentage, setWastePercentage] = useState<number>(5); // Default 5%
-  const [marginPercentage, setMarginPercentage] = useState<number>(30);
+  const [marginPercentage, setMarginPercentage] = useState<number | "">("");
   
   // Multi-Channel Pricing State
   const [channels, setChannels] = useState<{ id: string; name: string; price: number; feePercent: number }[]>([
@@ -101,11 +101,11 @@ export default function Calculator() {
         // So we load name, materials, costs, note. Version will be auto-calculated as next version.
         
         setProjectNote(projectToEdit.note || "");
-        setCarpenterCost(projectToEdit.costs.carpenter);
+        setCarpenterCost(projectToEdit.costs.carpenter || "");
         setPaintingCost(projectToEdit.costs.painting);
         setPackingCost(projectToEdit.costs.packing);
         setWastePercentage(projectToEdit.costs.wastePercentage || 5);
-        setMarginPercentage(projectToEdit.margin);
+        setMarginPercentage(projectToEdit.margin || "");
         setProjectVersion(projectToEdit.version);
         setEditingProjectId(projectToEdit.id);
 
@@ -233,10 +233,10 @@ export default function Calculator() {
   const wasteCost = Math.ceil(totalWoodCost * (wastePercentage / 100));
   const totalMaterialCost = totalWoodCost + wasteCost;
   
-  const totalLaborCost = carpenterCost + paintingCost + packingCost;
-  const totalCost = totalMaterialCost + totalLaborCost;
+  const totalLaborCost = (typeof carpenterCost === 'number' ? carpenterCost : 0) + paintingCost + packingCost;
+  const totalCost = totalMaterialCost + (typeof carpenterCost === 'number' ? carpenterCost : 0) + paintingCost + packingCost;
   
-  const profit = Math.ceil(totalCost * (marginPercentage / 100));
+  const profit = Math.ceil(totalCost * ((typeof marginPercentage === 'number' ? marginPercentage : 0) / 100));
   const sellingPrice = totalCost + profit;
 
   // Update default channel price if it hasn't been manually edited (optional logic, but let's keep it simple for now)
@@ -301,14 +301,14 @@ export default function Calculator() {
       name: projectName,
       version: projectVersion,
       status: "Idea" as const,
-      margin: marginPercentage,
+      margin: typeof marginPercentage === 'number' ? marginPercentage : 0,
       totalCost: totalCost,
       sellingPrice: sellingPrice, // This remains as the "Base/Calculated Price"
       channels: calculatedChannels,
       note: projectNote,
       materials: selectedWoods,
       costs: {
-        carpenter: carpenterCost,
+        carpenter: typeof carpenterCost === 'number' ? carpenterCost : 0,
         painting: paintingCost,
         packing: packingCost,
         waste: wasteCost,
@@ -330,7 +330,7 @@ export default function Calculator() {
       setProjectName("");
       setProjectNote("");
       setSelectedWoods([]);
-      setCarpenterCost(0);
+      setCarpenterCost("");
       setPaintingCost(0);
       setPackingCost(0);
     }
@@ -798,7 +798,7 @@ export default function Calculator() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-6">
-              {/* Waste & Margin */}
+              {/* Waste & Carpenter Cost */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="waste" className="font-bold uppercase text-red-600">Wood Waste (%)</Label>
@@ -815,37 +815,27 @@ export default function Calculator() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="margin" className="font-bold uppercase text-green-600">Profit Margin (%)</Label>
-                  <div className="relative">
-                    <Input 
-                      id="margin" 
-                      type="number" 
-                      min="0"
-                      value={marginPercentage}
-                      onChange={(e) => setMarginPercentage(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="neo-input h-12 text-lg font-bold pr-8 border-green-200 focus:border-green-500"
-                    />
-                    <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-black/10 w-full"></div>
-
-              {/* Labor Costs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div className="space-y-2">
                   <Label htmlFor="carpenterCost" className="font-bold uppercase">Carpenter Cost</Label>
                   <Input 
                     id="carpenterCost" 
                     type="number" 
                     min="0"
                     value={carpenterCost}
-                    onChange={(e) => setCarpenterCost(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") setCarpenterCost("");
+                      else setCarpenterCost(Math.max(0, parseInt(val) || 0));
+                    }}
                     className="neo-input h-12 text-lg font-bold"
-                    placeholder="0"
+                    placeholder=""
                   />
                 </div>
+              </div>
+
+              <div className="h-px bg-black/10 w-full"></div>
+
+              {/* Other Costs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="packingCost" className="font-bold uppercase">Packing Cost</Label>
                   <Input 
@@ -873,6 +863,27 @@ export default function Calculator() {
               </div>
 
               <div className="h-px bg-black/10 w-full"></div>
+
+              {/* Profit Margin */}
+              <div className="space-y-2">
+                <Label htmlFor="margin" className="font-bold uppercase text-green-600">Profit Margin (%)</Label>
+                <div className="relative">
+                  <Input 
+                    id="margin" 
+                    type="number" 
+                    min="0"
+                    value={marginPercentage}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") setMarginPercentage("");
+                      else setMarginPercentage(Math.max(0, parseInt(val) || 0));
+                    }}
+                    className="neo-input h-12 text-lg font-bold pr-8 border-green-200 focus:border-green-500"
+                    placeholder=""
+                  />
+                  <span className="absolute right-3 top-3 font-bold text-muted-foreground">%</span>
+                </div>
+              </div>
 
               {/* Note */}
               <div className="space-y-2">
