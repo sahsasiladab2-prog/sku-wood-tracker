@@ -58,6 +58,7 @@ export default function Tracker() {
       const fee = Math.ceil(price * (newChannels[index].feePercent / 100));
       const netProfit = price - totalCost - fee;
       // Net Profit Margin = (Net Profit / Selling Price) * 100
+      // Net Profit Margin = (Net Profit / Selling Price) * 100
       const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
       
       newChannels[index].profit = netProfit;
@@ -353,15 +354,26 @@ export default function Tracker() {
                                 <div className="flex gap-1">
                                   {version.channels && version.channels.length > 0 ? (
                                     [...version.channels]
-                                      .sort((a, b) => b.marginPercent - a.marginPercent) // Sort by margin descending
-                                      .map((ch, idx) => (
-                                        <Badge key={idx} className={cn(
-                                          "border-none font-bold text-white",
-                                          ch.marginPercent >= 30 ? "bg-green-500" : ch.marginPercent >= 15 ? "bg-yellow-500" : "bg-red-500"
-                                        )}>
-                                          {ch.marginPercent}% ({ch.name})
-                                        </Badge>
-                                      ))
+                                      .sort((a, b) => {
+                                        // Calculate real-time margin for sorting
+                                        const marginA = a.price > 0 ? (a.profit / a.price) * 100 : 0;
+                                        const marginB = b.price > 0 ? (b.profit / b.price) * 100 : 0;
+                                        return marginB - marginA;
+                                      })
+                                      .map((ch, idx) => {
+                                        // Calculate real-time margin for display: (Net Profit / Selling Price) * 100
+                                        const realMargin = ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0";
+                                        const marginVal = parseFloat(realMargin);
+                                        
+                                        return (
+                                          <Badge key={idx} className={cn(
+                                            "border-none font-bold text-white",
+                                            marginVal >= 30 ? "bg-green-500" : marginVal >= 15 ? "bg-yellow-500" : "bg-red-500"
+                                          )}>
+                                            {realMargin}% ({ch.name})
+                                          </Badge>
+                                        );
+                                      })
                                   ) : (
                                     <Badge className="bg-gray-400 text-white border-none">No Margin Data</Badge>
                                   )}
@@ -426,7 +438,7 @@ export default function Tracker() {
                                           <div className="flex justify-between items-center pt-1 mt-1 border-t border-purple-200">
                                             <span className="text-muted-foreground font-bold">Net Profit:</span>
                                             <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
-                                              {channel.profit.toLocaleString()} ({channel.marginPercent}%)
+                                              {channel.profit.toLocaleString()} ({channel.price > 0 ? ((channel.profit / channel.price) * 100).toFixed(1) : "0.0"}%)
                                             </span>
                                           </div>
                                         </div>
