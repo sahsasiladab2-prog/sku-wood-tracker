@@ -142,8 +142,30 @@ export default function Calculator() {
     if (projectName && !editingProjectId) {
       const nextVersion = getProjectVersion(projectName);
       setProjectVersion(nextVersion);
+
+      // Try to find the latest version of this project to copy channels/prices
+      // We look for projects with the same name
+      const existingProjects = projects.filter(p => p.name.toLowerCase() === projectName.toLowerCase());
+      
+      if (existingProjects.length > 0) {
+        // Sort by version descending to get the latest
+        const latestProject = existingProjects.sort((a, b) => b.version - a.version)[0];
+        
+        if (latestProject && latestProject.channels && latestProject.channels.length > 0) {
+          // Copy channels and prices from the latest version
+          setChannels(latestProject.channels.map(c => ({
+            id: crypto.randomUUID(), // Generate new IDs to avoid linking to old project
+            name: c.name,
+            price: c.price,
+            feePercent: c.feePercent || 0
+          })));
+          
+          // Optional: Notify user that prices were loaded
+          // toast.info(`Loaded prices from v.${latestProject.version}`);
+        }
+      }
     }
-  }, [projectName, getProjectVersion, editingProjectId]);
+  }, [projectName, getProjectVersion, editingProjectId, projects]);
 
   const addWood = (code: string) => {
     const wood = woodData.find((w) => w.code === code);
