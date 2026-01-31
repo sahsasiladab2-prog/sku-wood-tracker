@@ -352,7 +352,7 @@ export default function Tracker() {
                                 </Badge>
                               ) : (
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs font-bold text-muted-foreground mr-1">Net Profit:</span>
+                                  <span className="text-xs font-bold text-muted-foreground mr-1">Net Margin:</span>
                                   {version.channels && version.channels.length > 0 ? (
                                     [...version.channels]
                                       .sort((a, b) => {
@@ -371,7 +371,7 @@ export default function Tracker() {
                                             "border-none font-bold text-white",
                                             marginVal >= 30 ? "bg-green-500" : marginVal >= 15 ? "bg-yellow-500" : "bg-red-500"
                                           )}>
-                                            ฿{ch.profit.toLocaleString()} ({ch.name})
+                                            {parseFloat(ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0")} ({ch.name})
                                           </Badge>
                                         );
                                       })
@@ -437,11 +437,7 @@ export default function Tracker() {
                                             </div>
                                           )}
                                           <div className="flex justify-between items-center pt-1 mt-1 border-t border-purple-200">
-                                            <span className="text-muted-foreground font-bold">Net Profit:</span>
-                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
-                                              {channel.profit.toLocaleString()} ({channel.price > 0 ? ((channel.profit / channel.price) * 100).toFixed(1) : "0.0"}%)
-                                            </span>
-                                          </div>
+                                          <span className="text-muted-foreground font-bold">Net Profit:</span>\n                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>\n                                              {channel.profit.toLocaleString()}\n                                            </span>                                          </div>
                                         </div>
                                       </div>
                                     );
