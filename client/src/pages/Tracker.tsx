@@ -371,7 +371,7 @@ export default function Tracker() {
                                             "border-none font-bold text-white",
                                             marginVal >= 30 ? "bg-green-500" : marginVal >= 15 ? "bg-yellow-500" : "bg-red-500"
                                           )}>
-                                            {parseFloat(ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0")} ({ch.name})
+                                            {parseFloat(ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0")}% ({ch.name})
                                           </Badge>
                                         );
                                       })
