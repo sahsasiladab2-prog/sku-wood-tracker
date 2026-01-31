@@ -352,7 +352,7 @@ export default function Tracker() {
                                 </Badge>
                               ) : (
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs font-bold text-muted-foreground mr-1">Net Margin:</span>
+                                  <span className="text-xs font-bold text-muted-foreground mr-1">Net Profit:</span>
                                   {version.channels && version.channels.length > 0 ? (
                                     [...version.channels]
                                       .sort((a, b) => {
@@ -371,7 +371,7 @@ export default function Tracker() {
                                             "border-none font-bold text-white",
                                             marginVal >= 30 ? "bg-green-500" : marginVal >= 15 ? "bg-yellow-500" : "bg-red-500"
                                           )}>
-                                            {realMargin}% ({ch.name})
+                                            ฿{ch.profit.toLocaleString()} ({ch.name})
                                           </Badge>
                                         );
                                       })
