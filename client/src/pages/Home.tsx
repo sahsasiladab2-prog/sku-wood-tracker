@@ -40,16 +40,28 @@ export default function Home() {
     return Array.from(latestMap.values());
   }, [projects]);
 
-  // Helper to get stats based on selected channel
+  // Helper to get stats based on selected channel (Synced with Tracker.tsx logic)
   const getProjectStats = (project: any) => {
+    // Logic from Tracker.tsx:
+    // Net Profit = Selling Price - Total Cost - Fee
+    // Net Margin = (Net Profit / Selling Price) * 100
+
     // If a specific channel is selected
     if (selectedChannel !== "all") {
       const targetChannel = project.channels?.find((c: any) => c.name === selectedChannel);
       if (targetChannel) {
+        // Recalculate to ensure consistency with Tracker
+        const price = targetChannel.price || 0;
+        const feePercent = targetChannel.feePercent || 0;
+        const fee = Math.ceil(price * (feePercent / 100));
+        const totalCost = project.totalCost || 0;
+        const netProfit = price - totalCost - fee;
+        const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
+
         return {
-          margin: targetChannel.marginPercent,
-          profit: targetChannel.profit,
-          price: targetChannel.price,
+          margin: margin,
+          profit: netProfit,
+          price: price,
           channelName: targetChannel.name,
           hasChannel: true
         };
@@ -64,14 +76,26 @@ export default function Home() {
       };
     }
 
-    // Default behavior: Best channel
+    // Default behavior: Best channel (Max Net Margin)
     if (project.channels && project.channels.length > 0) {
-      const bestChannel = project.channels.reduce((prev: any, current: any) => 
-        (current.marginPercent > prev.marginPercent) ? current : prev
+      // Calculate real margin for all channels first
+      const calculatedChannels = project.channels.map((c: any) => {
+        const price = c.price || 0;
+        const feePercent = c.feePercent || 0;
+        const fee = Math.ceil(price * (feePercent / 100));
+        const totalCost = project.totalCost || 0;
+        const netProfit = price - totalCost - fee;
+        const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
+        return { ...c, realMargin: margin, realProfit: netProfit };
+      });
+
+      const bestChannel = calculatedChannels.reduce((prev: any, current: any) => 
+        (current.realMargin > prev.realMargin) ? current : prev
       );
+
       return {
-        margin: bestChannel.marginPercent,
-        profit: bestChannel.profit,
+        margin: bestChannel.realMargin,
+        profit: bestChannel.realProfit,
         price: bestChannel.price,
         channelName: bestChannel.name,
         hasChannel: true
@@ -79,10 +103,15 @@ export default function Home() {
     }
     
     // Fallback to legacy fields
+    const price = project.sellingPrice || 0;
+    const totalCost = project.totalCost || 0;
+    const netProfit = price - totalCost;
+    const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
+
     return {
-      margin: project.margin || 0,
-      profit: (project.sellingPrice || 0) - (project.totalCost || 0),
-      price: project.sellingPrice || 0,
+      margin: margin,
+      profit: netProfit,
+      price: price,
       channelName: 'Default',
       hasChannel: true
     };
