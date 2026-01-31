@@ -29,7 +29,11 @@ export default function Home() {
     const latestMap = new Map();
     projects.forEach(p => {
       const existing = latestMap.get(p.name);
-      if (!existing || p.version > existing.version) {
+      // Ensure version comparison is numeric
+      const currentVer = Number(p.version) || 0;
+      const existingVer = existing ? (Number(existing.version) || 0) : -1;
+      
+      if (!existing || currentVer > existingVer) {
         latestMap.set(p.name, p);
       }
     });
@@ -103,8 +107,9 @@ export default function Home() {
   const totalXp = projects.reduce((sum, p) => sum + (p.totalCost > 5000 ? 1000 : 500), 0);
   const level = Math.floor(totalXp / 1000) + 1;
 
-  // Get top projects by margin (Top 5)
+  // Get top projects by margin (Top 5), filtering out 0% or negative margins
   const topProjects = [...activeProjects]
+    .filter(p => p.margin > 0)
     .sort((a, b) => b.margin - a.margin)
     .slice(0, 5);
 
