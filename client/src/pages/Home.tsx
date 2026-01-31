@@ -9,15 +9,41 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 export default function Home() {
   const { projects } = useProjects();
 
+  // Helper to get best channel stats for a project
+  const getProjectStats = (project: any) => {
+    if (project.channels && project.channels.length > 0) {
+      // Find channel with highest margin %
+      const bestChannel = project.channels.reduce((prev: any, current: any) => 
+        (current.marginPercent > prev.marginPercent) ? current : prev
+      );
+      return {
+        margin: bestChannel.marginPercent,
+        profit: bestChannel.profit,
+        price: bestChannel.price,
+        channelName: bestChannel.name
+      };
+    }
+    // Fallback to legacy fields if no channels
+    return {
+      margin: project.margin || 0,
+      profit: (project.sellingPrice || 0) - (project.totalCost || 0),
+      price: project.sellingPrice || 0,
+      channelName: 'Default'
+    };
+  };
+
   // Calculate stats
   const activeSkus = projects.length;
+  
+  const projectStats = projects.map(p => getProjectStats(p));
+  
   const avgMargin = activeSkus > 0 
-    ? Math.round(projects.reduce((sum, p) => sum + p.margin, 0) / activeSkus) 
+    ? Math.round(projectStats.reduce((sum, s) => sum + s.margin, 0) / activeSkus) 
     : 0;
   
   // Financial Overview
-  const totalPotentialRevenue = projects.reduce((sum, p) => sum + p.sellingPrice, 0);
-  const totalPotentialProfit = projects.reduce((sum, p) => sum + (p.sellingPrice - p.totalCost), 0);
+  const totalPotentialRevenue = projectStats.reduce((sum, s) => sum + s.price, 0);
+  const totalPotentialProfit = projectStats.reduce((sum, s) => sum + s.profit, 0);
   
   // Gamification Stats
   const totalXp = projects.reduce((sum, p) => sum + (p.totalCost > 5000 ? 1000 : 500), 0);
@@ -25,11 +51,14 @@ export default function Home() {
 
   // Get top projects by margin (Top 5)
   const topProjects = [...projects]
+    .map(p => ({ ...p, ...getProjectStats(p) }))
     .sort((a, b) => b.margin - a.margin)
     .slice(0, 5);
 
   // Identify Low Margin Projects (< 15%)
-  const lowMarginProjects = projects.filter(p => p.margin < 15);
+  const lowMarginProjects = projects
+    .map(p => ({ ...p, ...getProjectStats(p) }))
+    .filter(p => p.margin < 15);
 
   // Cost Structure Analysis
   const totalWoodCost = projects.reduce((sum, p) => {
@@ -149,9 +178,14 @@ export default function Home() {
                           <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">
                             Margin: {project.margin}%
                           </span>
-                          <span className="text-muted-foreground">
-                            Profit: ฿{(project.sellingPrice - project.totalCost).toLocaleString()}
+                          <span className="text-muted-foreground font-medium">
+                            Profit: ฿{project.profit.toLocaleString()}
                           </span>
+                          {project.channelName !== 'Default' && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                              via {project.channelName}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="hidden md:block text-right">
