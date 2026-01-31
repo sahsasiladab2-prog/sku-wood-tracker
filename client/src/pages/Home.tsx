@@ -24,6 +24,18 @@ export default function Home() {
     return Array.from(channels).sort();
   }, [projects]);
 
+  // Filter only the latest version of each SKU
+  const latestProjects = useMemo(() => {
+    const latestMap = new Map();
+    projects.forEach(p => {
+      const existing = latestMap.get(p.name);
+      if (!existing || p.version > existing.version) {
+        latestMap.set(p.name, p);
+      }
+    });
+    return Array.from(latestMap.values());
+  }, [projects]);
+
   // Helper to get stats based on selected channel
   const getProjectStats = (project: any) => {
     // If a specific channel is selected
@@ -72,8 +84,8 @@ export default function Home() {
     };
   };
 
-  // Filter projects based on channel availability
-  const activeProjects = projects.map(p => ({ ...p, ...getProjectStats(p) }))
+  // Filter projects based on channel availability (using only latest versions)
+  const activeProjects = latestProjects.map(p => ({ ...p, ...getProjectStats(p) }))
     .filter(p => p.hasChannel);
 
   // Calculate stats
@@ -87,7 +99,7 @@ export default function Home() {
   const totalPotentialRevenue = activeProjects.reduce((sum, p) => sum + p.price, 0);
   const totalPotentialProfit = activeProjects.reduce((sum, p) => sum + p.profit, 0);
   
-  // Gamification Stats (Global)
+  // Gamification Stats (Global - based on all history)
   const totalXp = projects.reduce((sum, p) => sum + (p.totalCost > 5000 ? 1000 : 500), 0);
   const level = Math.floor(totalXp / 1000) + 1;
 
@@ -122,18 +134,18 @@ export default function Home() {
     });
   }, [projects, selectedHistorySku, selectedChannel]);
 
-  // Cost Structure Analysis
-  const totalWoodCost = projects.reduce((sum, p) => {
-    const woodCost = p.materials?.reduce((wSum, m) => wSum + (m.calculatedCost || 0), 0) || 0;
+  // Cost Structure Analysis (using only latest versions)
+  const totalWoodCost = activeProjects.reduce((sum, p) => {
+    const woodCost = p.materials?.reduce((wSum: number, m: any) => wSum + (m.calculatedCost || 0), 0) || 0;
     return sum + woodCost;
   }, 0);
   
-  const totalLaborCost = projects.reduce((sum, p) => {
+  const totalLaborCost = activeProjects.reduce((sum, p) => {
     const labor = (p.costs?.carpenter || 0) + (p.costs?.painting || 0) + (p.costs?.packing || 0);
     return sum + labor;
   }, 0);
 
-  const totalWasteCost = projects.reduce((sum, p) => sum + (p.costs?.waste || 0), 0);
+  const totalWasteCost = activeProjects.reduce((sum, p) => sum + (p.costs?.waste || 0), 0);
 
   const costData = [
     { name: 'Wood Material', value: totalWoodCost, color: '#FFC107' }, // Amber
