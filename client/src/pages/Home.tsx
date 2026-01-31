@@ -1,16 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Button } from "@/components/ui/button";
-import { Trophy, TrendingUp, Package, ArrowRight, Star, Target, AlertTriangle, DollarSign, PieChart as PieIcon, Filter } from "lucide-react";
+import { Trophy, TrendingUp, Package, ArrowRight, Star, Target, AlertTriangle, DollarSign, PieChart as PieIcon, Filter, History } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo } from "react";
 
 export default function Home() {
   const { projects } = useProjects();
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
+  const [selectedHistorySku, setSelectedHistorySku] = useState<string>("all");
 
   // Extract all unique channel names from all projects
   const availableChannels = useMemo(() => {
@@ -97,6 +98,29 @@ export default function Home() {
 
   // Identify Low Margin Projects (< 15%)
   const lowMarginProjects = activeProjects.filter(p => p.margin < 15);
+
+  // Prepare Data for Net Margin History Chart
+  const uniqueSkuNames = useMemo(() => {
+    return Array.from(new Set(projects.map(p => p.name))).sort();
+  }, [projects]);
+
+  const historyChartData = useMemo(() => {
+    if (selectedHistorySku === "all") return [];
+
+    // Filter projects by selected SKU name
+    const skuVersions = projects
+      .filter(p => p.name === selectedHistorySku)
+      .sort((a, b) => a.version - b.version); // Sort by version ascending
+
+    return skuVersions.map(v => {
+      const stats = getProjectStats(v);
+      return {
+        version: `v.${v.version}`,
+        margin: stats.margin,
+        profit: stats.profit
+      };
+    });
+  }, [projects, selectedHistorySku, selectedChannel]);
 
   // Cost Structure Analysis
   const totalWoodCost = projects.reduce((sum, p) => {
@@ -242,96 +266,128 @@ export default function Home() {
                           )}
                         </div>
                       </div>
-                      <div className="hidden md:block text-right">
-                        <Link href={`/calculator?edit=${project.id}`}>
-                          <Button size="sm" variant="outline" className="border-black hover:bg-black hover:text-white">
-                            Analyze
-                          </Button>
-                        </Link>
-                      </div>
+                      <Link href={`/calculator?id=${project.id}`}>
+                        <Button variant="outline" size="sm" className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all">
+                          Analyze
+                        </Button>
+                      </Link>
                     </div>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Low Margin Alerts */}
-          {lowMarginProjects.length > 0 && (
-            <Card className="neo-card bg-red-50 border-red-500">
-              <CardHeader className="border-b-2 border-red-200 py-3">
-                <CardTitle className="font-heading text-base md:text-lg uppercase flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="w-5 h-5" /> Low Net Margin Alerts ({lowMarginProjects.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="flex flex-wrap gap-2">
-                  {lowMarginProjects.map(p => (
-                    <Link key={p.id} href={`/calculator?edit=${p.id}`}>
-                      <div className="bg-white border border-red-200 px-3 py-1 rounded-full text-sm font-bold text-red-600 hover:bg-red-100 cursor-pointer flex items-center gap-2">
-                        {p.name} <span className="bg-red-100 px-1.5 rounded text-xs">{p.margin}%</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
-        {/* Cost Structure Analysis */}
-        <div className="lg:col-span-1">
-          <Card className="neo-card bg-white h-full">
+        {/* Cost Structure Analysis & Net Margin History */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <Card className="neo-card bg-white flex-1">
             <CardHeader className="border-b-2 border-black py-3 md:py-4">
               <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
                 <PieIcon className="w-5 h-5" /> Cost Structure
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 flex flex-col items-center justify-center min-h-[300px]">
+            <CardContent className="p-4 flex flex-col items-center justify-center min-h-[250px]">
               {costData.length > 0 ? (
-                <div className="w-full h-[250px] relative">
+                <div className="w-full h-[200px] relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={costData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        innerRadius={50}
+                        outerRadius={70}
                         paddingAngle={5}
                         dataKey="value"
-                        stroke="#000"
-                        strokeWidth={2}
                       >
                         {costData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={2} />
                         ))}
                       </Pie>
                       <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '2px solid #000', 
-                          borderRadius: '0px',
-                          boxShadow: '4px 4px 0px 0px #000000',
-                          fontWeight: 'bold'
-                        }} 
+                        contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
                         formatter={(value: number) => `฿${value.toLocaleString()}`}
                       />
                       <Legend verticalAlign="bottom" height={36} iconType="circle" />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                    <div className="text-xs font-bold text-muted-foreground uppercase">Total Cost</div>
-                    <div className="text-lg font-black">฿{(totalWoodCost + totalLaborCost + totalWasteCost).toLocaleString()}</div>
+                  {/* Center Text */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Cost</p>
+                      <p className="font-heading text-lg font-bold">฿{(totalWoodCost + totalLaborCost + totalWasteCost).toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-muted-foreground">
-                  No cost data available.
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No cost data available.</p>
+                  <p className="text-xs mt-2">Breakdown of costs across all active projects.</p>
                 </div>
               )}
-              <div className="mt-4 text-xs text-center text-muted-foreground">
-                Breakdown of costs across all active projects.
+            </CardContent>
+          </Card>
+
+          {/* Net Margin History Chart */}
+          <Card className="neo-card bg-white flex-1">
+            <CardHeader className="border-b-2 border-black py-3 md:py-4 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
+                <History className="w-5 h-5" /> Margin History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="mb-4">
+                <Select value={selectedHistorySku} onValueChange={setSelectedHistorySku}>
+                  <SelectTrigger className="h-9 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold text-xs">
+                    <SelectValue placeholder="Select SKU to view history" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select SKU...</SelectItem>
+                    {uniqueSkuNames.map(name => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="h-[180px] w-full">
+                {selectedHistorySku !== "all" && historyChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historyChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="version" 
+                        stroke="#000"
+                        fontSize={10}
+                        tickMargin={5}
+                      />
+                      <YAxis 
+                        stroke="#000" 
+                        fontSize={10}
+                        tickFormatter={(val) => `${val}%`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
+                        labelFormatter={(v) => `${selectedHistorySku} (${v})`}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="margin" 
+                        stroke="#16a34a" 
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: "#16a34a", stroke: "#000", strokeWidth: 2 }}
+                        activeDot={{ r: 6, stroke: "#000", strokeWidth: 2 }}
+                        name="Net Margin"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                    <TrendingUp className="w-8 h-8 mb-2 opacity-20" />
+                    <p className="text-sm font-medium">Select a SKU to view trend</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
