@@ -205,7 +205,7 @@ export default function Home() {
           <Card className="neo-card bg-white h-full">
             <CardHeader className="border-b-2 border-black bg-yellow-400 text-black py-3 md:py-4">
               <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
-                <Trophy className="w-6 h-6" /> Top Margin Performers
+                <Trophy className="w-6 h-6" /> Top Net Margin Performers
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -230,7 +230,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">
-                            Margin: {project.margin}%
+                            Net Margin: {project.margin}%
                           </span>
                           <span className="text-muted-foreground font-medium">
                             Profit: ฿{project.profit.toLocaleString()}
@@ -261,7 +261,7 @@ export default function Home() {
             <Card className="neo-card bg-red-50 border-red-500">
               <CardHeader className="border-b-2 border-red-200 py-3">
                 <CardTitle className="font-heading text-base md:text-lg uppercase flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="w-5 h-5" /> Low Margin Alerts ({lowMarginProjects.length})
+                  <AlertTriangle className="w-5 h-5" /> Low Net Margin Alerts ({lowMarginProjects.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">

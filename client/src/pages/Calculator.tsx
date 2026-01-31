@@ -888,7 +888,7 @@ export default function Calculator() {
 
               {/* Profit Margin */}
               <div className="space-y-2">
-                <Label htmlFor="margin" className="font-bold uppercase text-green-600">Profit Margin (%)</Label>
+                <Label htmlFor="margin" className="font-bold uppercase text-green-600">Net Margin (%)</Label>
                 <div className="relative">
                   <Input 
                     id="margin" 
