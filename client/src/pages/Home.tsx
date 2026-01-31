@@ -275,7 +275,7 @@ export default function Home() {
           <Card className="neo-card bg-white h-full">
             <CardHeader className="border-b-2 border-black bg-yellow-400 text-black py-3 md:py-4">
               <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
-                <Trophy className="w-6 h-6" /> Top Net Profit Performers
+                <Trophy className="w-6 h-6" /> Top Net Margin Performers
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -299,7 +299,13 @@ export default function Home() {
                           <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
-                      <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">\n                            Net Profit: ฿{project.profit.toLocaleString()}\n                          </span>                          {project.channelName !== 'Default' && (
+                          <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">
+                            Net Margin: {project.margin}%
+                          </span>
+                          <span className="text-muted-foreground font-medium">
+                            Profit: ฿{project.profit.toLocaleString()}
+                          </span>
+                          {project.channelName !== 'Default' && (
                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
                               via {project.channelName}
                             </span>
