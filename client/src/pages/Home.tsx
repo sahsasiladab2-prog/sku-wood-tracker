@@ -1,18 +1,54 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Button } from "@/components/ui/button";
-import { Trophy, TrendingUp, Package, ArrowRight, Star, Target, AlertTriangle, DollarSign, PieChart as PieIcon } from "lucide-react";
+import { Trophy, TrendingUp, Package, ArrowRight, Star, Target, AlertTriangle, DollarSign, PieChart as PieIcon, Filter } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useMemo } from "react";
 
 export default function Home() {
   const { projects } = useProjects();
+  const [selectedChannel, setSelectedChannel] = useState<string>("all");
 
-  // Helper to get best channel stats for a project
+  // Extract all unique channel names from all projects
+  const availableChannels = useMemo(() => {
+    const channels = new Set<string>();
+    projects.forEach(p => {
+      if (p.channels) {
+        p.channels.forEach((c: any) => channels.add(c.name));
+      }
+    });
+    return Array.from(channels).sort();
+  }, [projects]);
+
+  // Helper to get stats based on selected channel
   const getProjectStats = (project: any) => {
+    // If a specific channel is selected
+    if (selectedChannel !== "all") {
+      const targetChannel = project.channels?.find((c: any) => c.name === selectedChannel);
+      if (targetChannel) {
+        return {
+          margin: targetChannel.marginPercent,
+          profit: targetChannel.profit,
+          price: targetChannel.price,
+          channelName: targetChannel.name,
+          hasChannel: true
+        };
+      }
+      // If project doesn't have this channel, return null stats
+      return {
+        margin: 0,
+        profit: 0,
+        price: 0,
+        channelName: '-',
+        hasChannel: false
+      };
+    }
+
+    // Default behavior: Best channel
     if (project.channels && project.channels.length > 0) {
-      // Find channel with highest margin %
       const bestChannel = project.channels.reduce((prev: any, current: any) => 
         (current.marginPercent > prev.marginPercent) ? current : prev
       );
@@ -20,45 +56,47 @@ export default function Home() {
         margin: bestChannel.marginPercent,
         profit: bestChannel.profit,
         price: bestChannel.price,
-        channelName: bestChannel.name
+        channelName: bestChannel.name,
+        hasChannel: true
       };
     }
-    // Fallback to legacy fields if no channels
+    
+    // Fallback to legacy fields
     return {
       margin: project.margin || 0,
       profit: (project.sellingPrice || 0) - (project.totalCost || 0),
       price: project.sellingPrice || 0,
-      channelName: 'Default'
+      channelName: 'Default',
+      hasChannel: true
     };
   };
 
+  // Filter projects based on channel availability
+  const activeProjects = projects.map(p => ({ ...p, ...getProjectStats(p) }))
+    .filter(p => p.hasChannel);
+
   // Calculate stats
-  const activeSkus = projects.length;
-  
-  const projectStats = projects.map(p => getProjectStats(p));
+  const activeSkus = activeProjects.length;
   
   const avgMargin = activeSkus > 0 
-    ? Math.round(projectStats.reduce((sum, s) => sum + s.margin, 0) / activeSkus) 
+    ? Math.round(activeProjects.reduce((sum, p) => sum + p.margin, 0) / activeSkus) 
     : 0;
   
   // Financial Overview
-  const totalPotentialRevenue = projectStats.reduce((sum, s) => sum + s.price, 0);
-  const totalPotentialProfit = projectStats.reduce((sum, s) => sum + s.profit, 0);
+  const totalPotentialRevenue = activeProjects.reduce((sum, p) => sum + p.price, 0);
+  const totalPotentialProfit = activeProjects.reduce((sum, p) => sum + p.profit, 0);
   
-  // Gamification Stats
+  // Gamification Stats (Global)
   const totalXp = projects.reduce((sum, p) => sum + (p.totalCost > 5000 ? 1000 : 500), 0);
   const level = Math.floor(totalXp / 1000) + 1;
 
   // Get top projects by margin (Top 5)
-  const topProjects = [...projects]
-    .map(p => ({ ...p, ...getProjectStats(p) }))
+  const topProjects = [...activeProjects]
     .sort((a, b) => b.margin - a.margin)
     .slice(0, 5);
 
   // Identify Low Margin Projects (< 15%)
-  const lowMarginProjects = projects
-    .map(p => ({ ...p, ...getProjectStats(p) }))
-    .filter(p => p.margin < 15);
+  const lowMarginProjects = activeProjects.filter(p => p.margin < 15);
 
   // Cost Structure Analysis
   const totalWoodCost = projects.reduce((sum, p) => {
@@ -91,7 +129,23 @@ export default function Home() {
             Overview of your wood empire's performance and profitability.
           </p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
+          <div className="w-full md:w-[200px]">
+            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+              <SelectTrigger className="h-12 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  <SelectValue placeholder="Filter Channel" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Best Channels</SelectItem>
+                {availableChannels.map(channel => (
+                  <SelectItem key={channel} value={channel}>{channel}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Link href="/calculator" className="w-full md:w-auto">
             <Button className="w-full md:w-auto neo-button bg-chart-3 text-white hover:bg-blue-700 h-12 px-6 text-lg">
               New Project <ArrowRight className="ml-2 w-5 h-5" />
