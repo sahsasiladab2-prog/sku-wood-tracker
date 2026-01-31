@@ -437,7 +437,11 @@ export default function Tracker() {
                                             </div>
                                           )}
                                           <div className="flex justify-between items-center pt-1 mt-1 border-t border-purple-200">
-                                          <span className="text-muted-foreground font-bold">Net Profit:</span>\n                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>\n                                              {channel.profit.toLocaleString()}\n                                            </span>                                          </div>
+                                          <span className="text-muted-foreground font-bold">Net Profit:</span>
+                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
+                                              {channel.profit.toLocaleString()}
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     );
