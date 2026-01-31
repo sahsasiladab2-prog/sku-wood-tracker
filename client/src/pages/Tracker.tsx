@@ -12,7 +12,8 @@ import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDow
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 
 
@@ -299,7 +300,7 @@ export default function Tracker() {
                               fontSize={10}
                               tickFormatter={(val) => `${val}%`}
                             />
-                            <Tooltip 
+                            <RechartsTooltip 
                               contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
                               labelFormatter={(v) => `Version ${v}`}
                             />
@@ -340,7 +341,34 @@ export default function Tracker() {
                               </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-bold text-lg">Total Cost: {version.totalCost.toLocaleString()} THB</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="font-bold text-lg cursor-help border-b border-dashed border-black/30">Total Cost: {version.totalCost.toLocaleString()} THB</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000] p-3">
+                                    <div className="space-y-2 text-xs">
+                                      <p className="font-bold uppercase border-b border-black/10 pb-1 mb-1">Cost Breakdown</p>
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                        <span className="text-muted-foreground">Materials:</span>
+                                        <span className="font-bold text-right">{(version.totalCost - (version.costs.carpenter + version.costs.painting + version.costs.packing + version.costs.waste)).toLocaleString()}</span>
+                                        
+                                        <span className="text-muted-foreground">Waste ({version.costs.wastePercentage}%):</span>
+                                        <span className="font-bold text-right text-red-500">{version.costs.waste.toLocaleString()}</span>
+                                        
+                                        <span className="text-muted-foreground">Carpenter:</span>
+                                        <span className="font-bold text-right text-blue-600">{version.costs.carpenter.toLocaleString()}</span>
+                                        
+                                        <span className="text-muted-foreground">Painting:</span>
+                                        <span className="font-bold text-right text-blue-600">{version.costs.painting.toLocaleString()}</span>
+                                        
+                                        <span className="text-muted-foreground">Packing:</span>
+                                        <span className="font-bold text-right text-blue-600">{version.costs.packing.toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               
                               {/* Margin Badge - Show Real Profit from Channels if Target Margin is 0 */}
                               {version.margin > 0 ? (
@@ -535,8 +563,7 @@ export default function Tracker() {
                         <Cell fill="#e9c46a" /> {/* Painting - chart-3 */}
                         <Cell fill="#264653" /> {/* Packing - chart-5 */}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `${value.toLocaleString()} THB`} />
-                      <Legend />
+                     <RechartsTooltip formatter={(value: number) => `${value.toLocaleString()} THB`} />                <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
