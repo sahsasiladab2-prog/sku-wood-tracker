@@ -253,9 +253,19 @@ export default function Tracker() {
                   </div>
                   <div>
                     <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
-                    <p className="text-sm font-bold text-muted-foreground uppercase mt-1">
-                      {groupVersions.length} Versions • Latest: v.{latestVersion.version}
-                    </p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <p className="text-sm font-bold text-muted-foreground uppercase">
+                        {groupVersions.length} Versions • Latest: v.{latestVersion.version}
+                      </p>
+                      {latestVersion.productionType && (
+                        <Badge variant="outline" className={cn(
+                          "ml-2 border-black font-bold",
+                          latestVersion.productionType === "In-House" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
+                        )}>
+                          {latestVersion.productionType === "In-House" ? "🏭 In-House" : "🛠️ Outsource"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -387,6 +397,14 @@ export default function Tracker() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className="bg-black text-white hover:bg-black border-none text-xs px-2 py-0.5">v.{version.version}</Badge>
+                              {version.productionType && (
+                                <Badge variant="outline" className={cn(
+                                  "border-black text-[10px] px-1.5 py-0",
+                                  version.productionType === "In-House" ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700"
+                                )}>
+                                  {version.productionType}
+                                </Badge>
+                              )}
                               <span className="text-xs font-bold text-muted-foreground uppercase">ID: {version.id.slice(0, 8)}</span>
                               <span className="text-[10px] text-muted-foreground ml-auto md:ml-2">
                                 {formatDate(version.updatedAt)}

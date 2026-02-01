@@ -21,6 +21,7 @@ export interface Project {
   channels?: ChannelPricing[]; // New field for multi-channel pricing
   updatedAt: string;
   note?: string;
+  productionType?: "Outsource" | "In-House";
   materials?: any[];
   costs?: any;
 }

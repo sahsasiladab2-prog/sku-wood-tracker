@@ -39,6 +39,7 @@ export default function Calculator() {
   const [projectName, setProjectName] = useState<string>("");
   const [projectVersion, setProjectVersion] = useState<number>(1);
   const [projectNote, setProjectNote] = useState<string>("");
+  const [productionType, setProductionType] = useState<"Outsource" | "In-House">("Outsource");
 
   // Costs
   const [carpenterCost, setCarpenterCost] = useState<number | "">("");
@@ -101,6 +102,7 @@ export default function Calculator() {
         // So we load name, materials, costs, note. Version will be auto-calculated as next version.
         
         setProjectNote(projectToEdit.note || "");
+        setProductionType(projectToEdit.productionType || "Outsource");
         setCarpenterCost(projectToEdit.costs.carpenter || "");
         setPaintingCost(projectToEdit.costs.painting);
         setPackingCost(projectToEdit.costs.packing);
@@ -347,6 +349,7 @@ export default function Calculator() {
       sellingPrice: sellingPrice, // This remains as the "Base/Calculated Price"
       channels: calculatedChannels,
       note: projectNote,
+      productionType,
       materials: selectedWoods,
       costs: {
         carpenter: typeof carpenterCost === 'number' ? carpenterCost : 0,
@@ -470,7 +473,7 @@ export default function Calculator() {
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-3 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="projectName" className="font-bold uppercase">Project Name</Label>
                   <Input 
                     id="projectName" 
@@ -479,6 +482,18 @@ export default function Calculator() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="productionType" className="font-bold uppercase">Production Type</Label>
+                  <Select value={productionType} onValueChange={(v: "Outsource" | "In-House") => setProductionType(v)}>
+                    <SelectTrigger className="neo-input h-12 text-lg font-bold bg-white">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Outsource">Outsource (ช่างนอก)</SelectItem>
+                      <SelectItem value="In-House">In-House (โรงงานทำเอง)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="projectVersion" className="font-bold uppercase">Version</Label>

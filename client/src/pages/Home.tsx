@@ -33,8 +33,14 @@ export default function Home() {
       const currentVer = Number(p.version) || 0;
       const existingVer = existing ? (Number(existing.version) || 0) : -1;
       
-      if (!existing || currentVer > existingVer) {
-        latestMap.set(p.name, p);
+      // We want to keep the latest version for EACH production type
+      // So the key should be name + productionType
+      const key = `${p.name}-${p.productionType || 'Outsource'}`;
+      const existingForKey = latestMap.get(key);
+      const existingVerForKey = existingForKey ? (Number(existingForKey.version) || 0) : -1;
+
+      if (!existingForKey || currentVer > existingVerForKey) {
+        latestMap.set(key, p);
       }
     });
     return Array.from(latestMap.values());
@@ -296,7 +302,17 @@ export default function Home() {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-1">
                           <h4 className="font-bold text-lg md:text-xl uppercase truncate">{project.name}</h4>
-                          <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
+                          <div className="flex items-center gap-2">
+                            {project.productionType && (
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase",
+                                project.productionType === "In-House" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-orange-50 text-orange-700 border-orange-200"
+                              )}>
+                                {project.productionType === "In-House" ? "In-House" : "Outsource"}
+                              </span>
+                            )}
+                            <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">
