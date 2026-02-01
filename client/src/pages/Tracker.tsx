@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp, Tag } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp, Tag, Search, GitCompare } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import { Slider } from "@/components/ui/slider";
 export default function Tracker() {
   const { projects, deleteProject, updateProject } = useProjects();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Manage Prices State
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
@@ -84,8 +85,17 @@ export default function Tracker() {
     }
   };
 
+  // Filter projects by search query
+  const filteredProjects = searchQuery.trim() 
+    ? projects.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.note && p.note.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : projects;
+
   // Group projects by name
-  const groupedProjects = projects.reduce((acc, project) => {
+  const groupedProjects = filteredProjects.reduce((acc, project) => {
     if (!acc[project.name]) {
       acc[project.name] = [];
     }
@@ -198,12 +208,37 @@ export default function Tracker() {
           >
             <Download className="mr-2 h-5 w-5" /> Export Data
           </Button>
+          <Link href="/compare" className="flex-1 md:flex-none">
+            <Button variant="outline" className="w-full neo-button bg-purple-100 text-purple-700 border-2 border-purple-300 hover:bg-purple-200 h-12 px-4">
+              <GitCompare className="mr-2 h-5 w-5" /> เปรียบเทียบ
+            </Button>
+          </Link>
           <Link href="/calculator" className="flex-1 md:flex-none">
             <Button className="w-full neo-button bg-chart-2 text-white hover:bg-pink-600 h-12 px-6 text-lg">
               <Plus className="mr-2 h-5 w-5" /> New SKU Quest
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Input
+          type="text"
+          placeholder="ค้นหา SKU ตามชื่อ, ID, หรือโน้ต..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-12 h-12 border-2 border-black shadow-[3px_3px_0px_0px_#000000] text-lg font-medium"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Gamification Header */}

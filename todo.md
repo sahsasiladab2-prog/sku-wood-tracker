@@ -15,7 +15,11 @@
 
 ## Pending Features
 - [ ] Import data functionality
-- [ ] Search/filter SKUs
-- [ ] Production comparison tool
+- [ ] Search/filter SKUs in Tracker page
+- [ ] Production comparison page (Outsource vs In-House)
 - [ ] Cost trend analysis charts
 - [ ] PDF export for reports
+
+## Completed This Session
+- [x] Add search bar to Tracker page
+- [x] Create production comparison page (Outsource vs In-House)

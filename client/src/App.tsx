@@ -9,6 +9,7 @@ import { CustomDataProvider } from "./contexts/CustomDataContext";
 import Home from "./pages/Home";
 import Calculator from "./pages/Calculator";
 import Tracker from "./pages/Tracker";
+import Compare from "./pages/Compare";
 import MainLayout from "./components/MainLayout";
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -18,6 +19,7 @@ function Router() {
         <Route path={"/"} component={Home} />
         <Route path={"/calculator"} component={Calculator} />
         <Route path={"/tracker"} component={Tracker} />
+        <Route path={"/compare"} component={Compare} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />
