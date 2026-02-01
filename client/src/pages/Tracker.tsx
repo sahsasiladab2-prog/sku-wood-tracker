@@ -177,9 +177,29 @@ export default function Tracker() {
             Track progress, complete quests, and level up!
           </p>
         </div>
-        <Button className="w-full md:w-auto neo-button bg-chart-2 text-white hover:bg-pink-600 h-12 px-6 text-lg">
-          <Plus className="mr-2 h-5 w-5" /> New SKU Quest
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button 
+            variant="outline"
+            className="flex-1 md:flex-none neo-button bg-white text-black border-2 border-black hover:bg-gray-100 h-12 px-4"
+            onClick={() => {
+              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 2));
+              const downloadAnchorNode = document.createElement('a');
+              downloadAnchorNode.setAttribute("href", dataStr);
+              downloadAnchorNode.setAttribute("download", "sku_wood_tracker_backup.json");
+              document.body.appendChild(downloadAnchorNode);
+              downloadAnchorNode.click();
+              downloadAnchorNode.remove();
+              toast.success("Data exported successfully!");
+            }}
+          >
+            <Download className="mr-2 h-5 w-5" /> Export Data
+          </Button>
+          <Link href="/calculator" className="flex-1 md:flex-none">
+            <Button className="w-full neo-button bg-chart-2 text-white hover:bg-pink-600 h-12 px-6 text-lg">
+              <Plus className="mr-2 h-5 w-5" /> New SKU Quest
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Gamification Header */}
