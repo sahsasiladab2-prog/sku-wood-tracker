@@ -1,6 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, LayoutDashboard, Trophy } from "lucide-react";
+import { Calculator, LayoutDashboard, Trophy, Upload, LogIn, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useProjects } from "@/contexts/ProjectContext";
+import { Button } from "@/components/ui/button";
+import { getLoginUrl } from "@/const";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -8,6 +12,8 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [location] = useLocation();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { hasPendingMigration, migrateFromLocalStorage, isLoading: projectsLoading } = useProjects();
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -46,18 +52,63 @@ export default function MainLayout({ children }: MainLayoutProps) {
           })}
         </nav>
 
-        <div className="mt-auto p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_#000000]">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-chart-1 border-2 border-black rounded-full flex items-center justify-center">
-              <span className="font-bold text-lg">LV.5</span>
+        {/* User Section */}
+        <div className="mt-auto space-y-3">
+          {/* Migration Banner */}
+          {isAuthenticated && hasPendingMigration && (
+            <div className="p-3 border-2 border-orange-500 bg-orange-50 shadow-[2px_2px_0px_0px_#f97316]">
+              <p className="text-xs font-bold text-orange-700 mb-2">📦 พบข้อมูลเก่าในเครื่อง</p>
+              <Button
+                size="sm"
+                className="w-full neo-button bg-orange-500 text-white hover:bg-orange-600 text-xs"
+                onClick={migrateFromLocalStorage}
+                disabled={projectsLoading}
+              >
+                <Upload className="w-3 h-3 mr-1" />
+                ย้ายข้อมูลขึ้นระบบ
+              </Button>
             </div>
-            <div>
-              <p className="font-bold text-sm">WOOD MASTER</p>
-              <p className="text-xs text-muted-foreground">XP: 4.5k / 5k</p>
-            </div>
-          </div>
-          <div className="w-full h-3 border-2 border-black bg-muted relative">
-            <div className="absolute top-0 left-0 h-full bg-chart-4 w-[90%]"></div>
+          )}
+
+          {/* Auth Status */}
+          <div className="p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_#000000]">
+            {authLoading ? (
+              <div className="text-center text-sm text-muted-foreground">กำลังโหลด...</div>
+            ) : isAuthenticated ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{user?.name || "User"}</p>
+                    <p className="text-xs text-muted-foreground">☁️ ข้อมูลปลอดภัย</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-2 border-black text-xs"
+                  onClick={() => logout()}
+                >
+                  <LogOut className="w-3 h-3 mr-1" />
+                  ออกจากระบบ
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-center text-muted-foreground">
+                  เข้าสู่ระบบเพื่อบันทึกข้อมูลอย่างปลอดภัย
+                </p>
+                <Button
+                  className="w-full neo-button bg-chart-3 text-white hover:bg-blue-700 text-xs"
+                  onClick={() => window.location.href = getLoginUrl()}
+                >
+                  <LogIn className="w-3 h-3 mr-1" />
+                  เข้าสู่ระบบ
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -67,10 +118,39 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <h1 className="text-xl font-heading font-bold uppercase text-white tracking-tighter">
           SKU WOOD TRACKER
         </h1>
-        <div className="w-8 h-8 bg-chart-1 border-2 border-black rounded-full flex items-center justify-center">
-          <span className="font-bold text-xs">LV.5</span>
-        </div>
+        {authLoading ? (
+          <div className="w-8 h-8 bg-gray-300 border-2 border-black rounded-full animate-pulse" />
+        ) : isAuthenticated ? (
+          <div className="w-8 h-8 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center">
+            <User className="w-4 h-4 text-white" />
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            className="neo-button bg-chart-3 text-white hover:bg-blue-700 text-xs px-2 py-1 h-8"
+            onClick={() => window.location.href = getLoginUrl()}
+          >
+            <LogIn className="w-3 h-3 mr-1" />
+            Login
+          </Button>
+        )}
       </header>
+
+      {/* Migration Banner for Mobile */}
+      {isAuthenticated && hasPendingMigration && (
+        <div className="md:hidden bg-orange-50 border-b-2 border-orange-500 p-3 flex items-center justify-between">
+          <p className="text-xs font-bold text-orange-700">📦 พบข้อมูลเก่าในเครื่อง</p>
+          <Button
+            size="sm"
+            className="neo-button bg-orange-500 text-white hover:bg-orange-600 text-xs h-7 px-2"
+            onClick={migrateFromLocalStorage}
+            disabled={projectsLoading}
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            ย้ายข้อมูล
+          </Button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 md:ml-64 overflow-y-auto bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">

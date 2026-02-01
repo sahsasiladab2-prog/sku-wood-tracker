@@ -316,7 +316,9 @@ export default function Calculator() {
     setChannels(newChannels);
   };
 
-  const handleSaveProject = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveProject = async () => {
     if (!projectName) {
       toast.error("Please enter a project name!");
       return;
@@ -326,57 +328,66 @@ export default function Calculator() {
       return;
     }
 
-    // Calculate profit for each channel
-    const calculatedChannels = channels.map(c => {
-      const feeAmount = Math.ceil(c.price * (c.feePercent / 100));
-      const netPrice = c.price - feeAmount;
-      const channelProfit = netPrice - totalCost;
-      // Net Profit Margin = (Net Profit / Selling Price) * 100
-      const channelMargin = c.price > 0 ? (channelProfit / c.price) * 100 : 0;
-      return {
-        ...c,
-        profit: channelProfit,
-        marginPercent: parseFloat(channelMargin.toFixed(1))
+    setIsSaving(true);
+
+    try {
+      // Calculate profit for each channel
+      const calculatedChannels = channels.map(c => {
+        const feeAmount = Math.ceil(c.price * (c.feePercent / 100));
+        const netPrice = c.price - feeAmount;
+        const channelProfit = netPrice - totalCost;
+        // Net Profit Margin = (Net Profit / Selling Price) * 100
+        const channelMargin = c.price > 0 ? (channelProfit / c.price) * 100 : 0;
+        return {
+          ...c,
+          profit: channelProfit,
+          marginPercent: parseFloat(channelMargin.toFixed(1))
+        };
+      });
+
+      const projectData = {
+        name: projectName,
+        version: projectVersion,
+        status: "Idea" as const,
+        margin: typeof marginPercentage === 'number' ? marginPercentage : 0,
+        totalCost: totalCost,
+        sellingPrice: sellingPrice, // This remains as the "Base/Calculated Price"
+        channels: calculatedChannels,
+        note: projectNote,
+        productionType,
+        materials: selectedWoods,
+        costs: {
+          carpenter: typeof carpenterCost === 'number' ? carpenterCost : 0,
+          painting: paintingCost,
+          packing: packingCost,
+          waste: wasteCost,
+          wastePercentage: wastePercentage
+        }
       };
-    });
 
-    const projectData = {
-      name: projectName,
-      version: projectVersion,
-      status: "Idea" as const,
-      margin: typeof marginPercentage === 'number' ? marginPercentage : 0,
-      totalCost: totalCost,
-      sellingPrice: sellingPrice, // This remains as the "Base/Calculated Price"
-      channels: calculatedChannels,
-      note: projectNote,
-      productionType,
-      materials: selectedWoods,
-      costs: {
-        carpenter: typeof carpenterCost === 'number' ? carpenterCost : 0,
-        painting: paintingCost,
-        packing: packingCost,
-        waste: wasteCost,
-        wastePercentage: wastePercentage
+      if (editingProjectId) {
+        await updateProject(editingProjectId, projectData);
+        toast.success(`Project "${projectName} v.${projectVersion}" updated!`);
+        // Clear edit mode after update
+        setEditingProjectId(null);
+        setLocation("/tracker"); // Redirect back to tracker after edit
+      } else {
+        await addProject(projectData);
+        toast.success(`Project "${projectName} v.${projectVersion}" created!`);
+        
+        // Reset form for next project
+        setProjectName("");
+        setProjectNote("");
+        setSelectedWoods([]);
+        setCarpenterCost("");
+        setPaintingCost(0);
+        setPackingCost(0);
       }
-    };
-
-    if (editingProjectId) {
-      updateProject(editingProjectId, projectData);
-      toast.success(`Project "${projectName} v.${projectVersion}" updated!`);
-      // Clear edit mode after update
-      setEditingProjectId(null);
-      setLocation("/tracker"); // Redirect back to tracker after edit
-    } else {
-      addProject(projectData);
-      toast.success(`Project "${projectName} v.${projectVersion}" created!`);
-      
-      // Reset form for next project
-      setProjectName("");
-      setProjectNote("");
-      setSelectedWoods([]);
-      setCarpenterCost("");
-      setPaintingCost(0);
-      setPackingCost(0);
+    } catch (error) {
+      toast.error("เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่");
+      console.error("Save error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -454,9 +465,14 @@ export default function Calculator() {
 
           <Button 
             onClick={handleSaveProject}
-            className="flex-1 md:flex-none neo-button bg-chart-4 text-white hover:bg-emerald-600 h-12 px-6 text-lg"
+            disabled={isSaving}
+            className="flex-1 md:flex-none neo-button bg-chart-4 text-white hover:bg-emerald-600 h-12 px-6 text-lg disabled:opacity-50"
           >
-            <Save className="mr-2 h-5 w-5" /> Save Project
+            {isSaving ? (
+              <><span className="animate-spin mr-2">⏳</span> กำลังบันทึก...</>
+            ) : (
+              <><Save className="mr-2 h-5 w-5" /> Save Project</>
+            )}
           </Button>
         </div>
       </div>

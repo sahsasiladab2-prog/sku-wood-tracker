@@ -10,8 +10,8 @@ import Home from "./pages/Home";
 import Calculator from "./pages/Calculator";
 import Tracker from "./pages/Tracker";
 import MainLayout from "./components/MainLayout";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <MainLayout>
       <Switch>

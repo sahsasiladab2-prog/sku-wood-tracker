@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { nanoid } from "nanoid";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { toast } from "sonner";
 
 export interface ChannelPricing {
   id: string;
-  name: string; // e.g., "Shopee A", "Lazada", "Retail"
+  name: string;
   price: number;
-  feePercent: number; // Platform fee percentage
+  feePercent: number;
   profit: number;
   marginPercent: number;
 }
@@ -15,10 +17,10 @@ export interface Project {
   name: string;
   version: number;
   status: "Idea" | "Prototype" | "Production" | "Discontinued";
-  margin: number; // Keep for backward compatibility or as "Default/Target Margin"
+  margin: number;
   totalCost: number;
-  sellingPrice: number; // Keep for backward compatibility (maybe as "Base Price")
-  channels?: ChannelPricing[]; // New field for multi-channel pricing
+  sellingPrice: number;
+  channels?: ChannelPricing[];
   updatedAt: string;
   note?: string;
   productionType?: "Outsource" | "In-House";
@@ -28,57 +30,251 @@ export interface Project {
 
 interface ProjectContextType {
   projects: Project[];
-  addProject: (project: Omit<Project, "id" | "updatedAt">) => void;
-  updateProject: (id: string, project: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
+  addProject: (project: Omit<Project, "id" | "updatedAt">) => Promise<void>;
+  updateProject: (id: string, project: Partial<Project>) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
   getProjectVersion: (name: string) => number;
+  isLoading: boolean;
+  migrateFromLocalStorage: () => Promise<void>;
+  hasPendingMigration: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
+// Helper to convert DB project to frontend format
+function dbToFrontend(dbProject: any): Project {
+  return {
+    id: dbProject.id,
+    name: dbProject.name,
+    version: dbProject.version,
+    status: "Production" as const,
+    margin: 0,
+    totalCost: dbProject.totalCost || 0,
+    sellingPrice: 0,
+    channels: dbProject.channels?.map((c: any, i: number) => ({
+      id: `ch-${i}`,
+      name: c.name,
+      price: c.price,
+      feePercent: c.feePercent,
+      profit: 0,
+      marginPercent: 0,
+    })),
+    updatedAt: dbProject.updatedAt?.toISOString?.() || new Date().toISOString(),
+    note: dbProject.note || undefined,
+    productionType: dbProject.productionType || "Outsource",
+    materials: dbProject.materials || [],
+    costs: {
+      carpenter: dbProject.carpenterCost || 0,
+      painting: dbProject.paintingCost || 0,
+      packing: dbProject.packingCost || 0,
+      waste: dbProject.wasteCost || 0,
+    },
+  };
+}
+
+// Helper to convert frontend project to DB format
+function frontendToDb(project: Partial<Project>) {
+  const result: any = {};
+  
+  if (project.name !== undefined) result.name = project.name;
+  if (project.version !== undefined) result.version = project.version;
+  if (project.productionType !== undefined) result.productionType = project.productionType;
+  if (project.note !== undefined) result.note = project.note;
+  if (project.totalCost !== undefined) result.totalCost = project.totalCost;
+  
+  if (project.materials !== undefined) {
+    result.materials = project.materials.map(m => ({
+      woodType: m.woodType || "",
+      thickness: m.thickness || 0,
+      width: m.width || 0,
+      length: m.length || 0,
+      quantity: m.quantity || 0,
+      pricePerUnit: m.pricePerUnit || 0,
+      calculatedCost: m.calculatedCost || 0,
+    }));
+  }
+  
+  if (project.costs !== undefined) {
+    result.carpenterCost = project.costs.carpenter || 0;
+    result.paintingCost = project.costs.painting || 0;
+    result.packingCost = project.costs.packing || 0;
+    result.wasteCost = project.costs.waste || 0;
+  }
+  
+  if (project.channels !== undefined) {
+    result.channels = project.channels.map(c => ({
+      name: c.name,
+      price: c.price,
+      feePercent: c.feePercent,
+    }));
+  }
+  
+  return result;
+}
+
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem("sku-projects");
-    return saved ? JSON.parse(saved) : [];
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [hasPendingMigration, setHasPendingMigration] = useState(false);
+  
+  // tRPC queries and mutations
+  const { data: dbProjects, isLoading, refetch } = trpc.project.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  
+  const createMutation = trpc.project.create.useMutation({
+    onSuccess: () => refetch(),
+  });
+  
+  const updateMutation = trpc.project.update.useMutation({
+    onSuccess: () => refetch(),
+  });
+  
+  const deleteMutation = trpc.project.delete.useMutation({
+    onSuccess: () => refetch(),
+  });
+  
+  const bulkImportMutation = trpc.project.bulkImport.useMutation({
+    onSuccess: () => {
+      refetch();
+      // Clear localStorage after successful migration
+      localStorage.removeItem("sku-projects");
+      setHasPendingMigration(false);
+      toast.success("ย้ายข้อมูลสำเร็จ! ข้อมูลของคุณถูกบันทึกในระบบออนไลน์แล้ว");
+    },
+    onError: (error) => {
+      toast.error("ย้ายข้อมูลล้มเหลว: " + error.message);
+    },
   });
 
+  // Convert DB projects to frontend format
+  const projects: Project[] = React.useMemo(() => {
+    if (!dbProjects) return [];
+    return dbProjects.map(dbToFrontend);
+  }, [dbProjects]);
+
+  // Check for pending migration on mount
   useEffect(() => {
-    localStorage.setItem("sku-projects", JSON.stringify(projects));
-  }, [projects]);
+    if (isAuthenticated && !authLoading) {
+      const localData = localStorage.getItem("sku-projects");
+      if (localData) {
+        try {
+          const localProjects = JSON.parse(localData);
+          if (Array.isArray(localProjects) && localProjects.length > 0) {
+            setHasPendingMigration(true);
+          }
+        } catch (e) {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+  }, [isAuthenticated, authLoading]);
 
-  const addProject = (projectData: Omit<Project, "id" | "updatedAt">) => {
-    const newProject: Project = {
-      ...projectData,
-      id: nanoid(),
-      updatedAt: new Date().toISOString(),
-    };
-    setProjects((prev) => [newProject, ...prev]);
-  };
+  const addProject = useCallback(async (projectData: Omit<Project, "id" | "updatedAt">) => {
+    if (!isAuthenticated) {
+      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    
+    const dbData = frontendToDb(projectData);
+    await createMutation.mutateAsync(dbData);
+  }, [isAuthenticated, createMutation]);
 
-  const updateProject = (id: string, updates: Partial<Project>) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
-    );
-  };
+  const updateProject = useCallback(async (id: string, updates: Partial<Project>) => {
+    if (!isAuthenticated) {
+      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    
+    const dbData = frontendToDb(updates);
+    await updateMutation.mutateAsync({ id, data: dbData });
+  }, [isAuthenticated, updateMutation]);
 
-  const deleteProject = (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-  };
+  const deleteProject = useCallback(async (id: string) => {
+    if (!isAuthenticated) {
+      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    
+    await deleteMutation.mutateAsync({ id });
+  }, [isAuthenticated, deleteMutation]);
 
-  const getProjectVersion = (name: string) => {
+  const getProjectVersion = useCallback((name: string) => {
     const existingProjects = projects.filter(
       (p) => p.name.toLowerCase() === name.toLowerCase()
     );
     
     if (existingProjects.length === 0) return 1;
 
-    // Find the highest version number
     const maxVersion = Math.max(...existingProjects.map(p => p.version));
     return maxVersion + 1;
-  };
+  }, [projects]);
+
+  const migrateFromLocalStorage = useCallback(async () => {
+    if (!isAuthenticated) {
+      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+
+    const localData = localStorage.getItem("sku-projects");
+    if (!localData) {
+      toast.info("ไม่พบข้อมูลในเครื่องที่ต้องย้าย");
+      return;
+    }
+
+    try {
+      const localProjects = JSON.parse(localData);
+      if (!Array.isArray(localProjects) || localProjects.length === 0) {
+        toast.info("ไม่พบข้อมูลในเครื่องที่ต้องย้าย");
+        return;
+      }
+
+      // Convert local projects to DB format
+      const projectsToImport = localProjects.map((p: any) => ({
+        id: p.id || `MIGRATED-${Date.now()}`,
+        name: p.name || "Unnamed",
+        version: p.version || 1,
+        productionType: p.productionType || "Outsource",
+        note: p.note || null,
+        materials: p.materials?.map((m: any) => ({
+          woodType: m.woodType || "",
+          thickness: m.thickness || 0,
+          width: m.width || 0,
+          length: m.length || 0,
+          quantity: m.quantity || 0,
+          pricePerUnit: m.pricePerUnit || 0,
+          calculatedCost: m.calculatedCost || 0,
+        })) || null,
+        carpenterCost: p.costs?.carpenter || 0,
+        paintingCost: p.costs?.painting || 0,
+        packingCost: p.costs?.packing || 0,
+        wasteCost: p.costs?.waste || 0,
+        channels: p.channels?.map((c: any) => ({
+          name: c.name,
+          price: c.price,
+          feePercent: c.feePercent,
+        })) || null,
+        totalCost: p.totalCost || 0,
+      }));
+
+      toast.info(`กำลังย้ายข้อมูล ${projectsToImport.length} รายการ...`);
+      await bulkImportMutation.mutateAsync({ projects: projectsToImport });
+    } catch (e) {
+      toast.error("เกิดข้อผิดพลาดในการย้ายข้อมูล");
+      console.error("Migration error:", e);
+    }
+  }, [isAuthenticated, bulkImportMutation]);
 
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProject, deleteProject, getProjectVersion }}>
+    <ProjectContext.Provider value={{ 
+      projects, 
+      addProject, 
+      updateProject, 
+      deleteProject, 
+      getProjectVersion,
+      isLoading: isLoading || authLoading,
+      migrateFromLocalStorage,
+      hasPendingMigration,
+    }}>
       {children}
     </ProjectContext.Provider>
   );

@@ -69,14 +69,18 @@ export default function Tracker() {
     setTempChannels(newChannels);
   };
 
-  const savePrices = () => {
+  const savePrices = async () => {
     if (selectedVersionForPrice) {
-      updateProject(selectedVersionForPrice.id, {
-        ...selectedVersionForPrice,
-        channels: tempChannels
-      });
-      toast.success("Prices updated successfully!");
-      setIsPriceModalOpen(false);
+      try {
+        await updateProject(selectedVersionForPrice.id, {
+          ...selectedVersionForPrice,
+          channels: tempChannels
+        });
+        toast.success("Prices updated successfully!");
+        setIsPriceModalOpen(false);
+      } catch (error) {
+        toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
+      }
     }
   };
 
@@ -598,11 +602,15 @@ export default function Tracker() {
                               variant="outline" 
                               size="sm" 
                               className="border-2 border-black font-bold uppercase text-xs h-8 hover:bg-red-500 hover:text-white transition-colors"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
                                 if (confirm(`Are you sure you want to delete ${name} v.${version.version}?`)) {
-                                  deleteProject(version.id);
-                                  toast.success(`Deleted ${name} v.${version.version}`);
+                                  try {
+                                    await deleteProject(version.id);
+                                    toast.success(`Deleted ${name} v.${version.version}`);
+                                  } catch (error) {
+                                    toast.error("ลบไม่สำเร็จ กรุณาลองใหม่");
+                                  }
                                 }
                               }}
                             >

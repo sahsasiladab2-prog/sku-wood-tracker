@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useMemo } from "react";
 
 export default function Home() {
+
   const { projects } = useProjects();
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
   const [selectedHistorySku, setSelectedHistorySku] = useState<string>("all");
