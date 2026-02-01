@@ -273,8 +273,14 @@ export default function Tracker() {
                 <div className="hidden md:flex items-center gap-6 mr-8">
                   <div className="text-right">
                     <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
-                    <p className={cn("font-heading text-xl font-bold", latestVersion.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
-                      {latestVersion.margin}%
+                    <p className={cn("font-heading text-xl font-bold", 
+                      (latestVersion.channels && latestVersion.channels.length > 0 
+                        ? Math.max(...latestVersion.channels.map(c => c.marginPercent || 0)) 
+                        : latestVersion.margin) >= 30 ? "text-green-600" : "text-yellow-600"
+                    )}>
+                      {latestVersion.channels && latestVersion.channels.length > 0 
+                        ? Math.max(...latestVersion.channels.map(c => c.marginPercent || 0)) 
+                        : latestVersion.margin}%
                     </p>
                   </div>
                   <div className="w-px h-8 bg-gray-300"></div>
@@ -287,13 +293,7 @@ export default function Tracker() {
                         : 0).toLocaleString()}
                     </p>
                   </div>
-                  <div className="w-px h-8 bg-gray-300"></div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Total Cost</p>
-                    <p className="font-heading text-xl font-bold">
-                      {latestVersion.totalCost.toLocaleString()}
-                    </p>
-                  </div>
+
                   
                   {/* Cost Savings Display (Only if there is a previous version) */}
                   {previousVersion && (
