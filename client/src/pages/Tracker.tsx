@@ -242,14 +242,41 @@ export default function Tracker() {
                 className="p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => toggleGroup(name)}
               >
-                <div className="flex items-center gap-4">
+<div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-chart-1 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
                     <Folder className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
-                    <p className="text-sm text-muted-foreground font-bold uppercase mt-1">
-                      {groupVersions.length} Version{groupVersions.length > 1 ? 's' : ''} • Latest: v.{latestVersion.version}
+                    <p className="text-sm font-bold text-muted-foreground uppercase mt-1">
+                      {groupVersions.length} Versions • Latest: v.{latestVersion.version}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Latest Version Summary Metrics */}
+                <div className="hidden md:flex items-center gap-6 mr-8">
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
+                    <p className={cn("font-heading text-xl font-bold", latestVersion.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
+                      {latestVersion.margin}%
+                    </p>
+                  </div>
+                  <div className="w-px h-8 bg-gray-300"></div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Net Profit</p>
+                    <p className="font-heading text-xl font-bold text-blue-600">
+                      {/* Calculate max profit from channels or default to 0 if no channels */}
+                      {(latestVersion.channels && latestVersion.channels.length > 0 
+                        ? Math.max(...latestVersion.channels.map(c => c.profit)) 
+                        : 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="w-px h-8 bg-gray-300"></div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Total Cost</p>
+                    <p className="font-heading text-xl font-bold">
+                      {latestVersion.totalCost.toLocaleString()}
                     </p>
                   </div>
                 </div>
