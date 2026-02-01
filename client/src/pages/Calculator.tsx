@@ -125,12 +125,42 @@ export default function Calculator() {
         }
 
         // Map materials back to SelectedWood format
+        // Handle both old format (woodType, thickness, etc.) and new format (code, description, etc.)
         if (projectToEdit.materials) {
-          const mappedMaterials = projectToEdit.materials.map(m => ({
-            ...m,
-            // Ensure calculatedCost is present (it should be in saved data)
-            calculatedCost: m.calculatedCost || m.cost
-          }));
+          const mappedMaterials = projectToEdit.materials.map((m: any) => {
+            // Check if it's old format (has woodType or missing code)
+            const isOldFormat = !m.code && (m.woodType !== undefined || m.thickness !== undefined);
+            
+            if (isOldFormat) {
+              // Old format: try to preserve what we can
+              return {
+                code: m.woodType || "CUSTOM",
+                description: m.woodType || "Imported Item",
+                unit: "cm",
+                refQty: m.length || 100,
+                cost: m.pricePerUnit || m.calculatedCost || 0,
+                quantity: m.quantity || 1,
+                usage: m.usage || "",
+                usedLength: m.length || m.usedLength || 100,
+                calculatedCost: m.calculatedCost || 0,
+                isCustom: true,
+              };
+            }
+            
+            // New format: use as-is with defaults
+            return {
+              code: m.code || "",
+              description: m.description || "",
+              unit: m.unit || "cm",
+              refQty: m.refQty || 100,
+              cost: m.cost || 0,
+              quantity: m.quantity || 1,
+              usage: m.usage || "",
+              usedLength: m.usedLength || m.refQty || 100,
+              calculatedCost: m.calculatedCost || m.cost || 0,
+              isCustom: m.isCustom || false,
+            };
+          });
           setSelectedWoods(mappedMaterials);
         }
         
@@ -166,11 +196,40 @@ export default function Calculator() {
 
           // Copy materials, costs, and other settings from the latest version
           // This allows user to start v2 based on v1 data
+          // Handle both old format and new format
           if (latestProject.materials) {
-            const mappedMaterials = latestProject.materials.map(m => ({
-              ...m,
-              calculatedCost: m.calculatedCost || m.cost
-            }));
+            const mappedMaterials = latestProject.materials.map((m: any) => {
+              // Check if it's old format (has woodType or missing code)
+              const isOldFormat = !m.code && (m.woodType !== undefined || m.thickness !== undefined);
+              
+              if (isOldFormat) {
+                return {
+                  code: m.woodType || "CUSTOM",
+                  description: m.woodType || "Imported Item",
+                  unit: "cm",
+                  refQty: m.length || 100,
+                  cost: m.pricePerUnit || m.calculatedCost || 0,
+                  quantity: m.quantity || 1,
+                  usage: m.usage || "",
+                  usedLength: m.length || m.usedLength || 100,
+                  calculatedCost: m.calculatedCost || 0,
+                  isCustom: true,
+                };
+              }
+              
+              return {
+                code: m.code || "",
+                description: m.description || "",
+                unit: m.unit || "cm",
+                refQty: m.refQty || 100,
+                cost: m.cost || 0,
+                quantity: m.quantity || 1,
+                usage: m.usage || "",
+                usedLength: m.usedLength || m.refQty || 100,
+                calculatedCost: m.calculatedCost || m.cost || 0,
+                isCustom: m.isCustom || false,
+              };
+            });
             setSelectedWoods(mappedMaterials);
           }
 

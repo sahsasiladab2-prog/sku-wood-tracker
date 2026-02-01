@@ -39,13 +39,16 @@ export const projects = mysqlTable("projects", {
   
   // Materials stored as JSON array
   materials: json("materials").$type<Array<{
-    woodType: string;
-    thickness: number;
-    width: number;
-    length: number;
+    code: string;
+    description: string;
+    usage: string;
+    usedLength: number;
+    refQty: number;
+    cost: number;
     quantity: number;
-    pricePerUnit: number;
     calculatedCost: number;
+    unit?: string;
+    isCustom?: boolean;
   }>>(),
   
   // Costs breakdown

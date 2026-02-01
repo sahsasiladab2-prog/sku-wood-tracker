@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, name, version, materials FROM projects LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2UA9PfwXiKzDe4P.4b071039320e --database 77SRbGssWJtPK3jVb4Aadc --execute SELECT id, name, version, materials FROM projects LIMIT 3;",
+  "rows": [
+    {
+      "id": "-MiN04lL3j1X7VXv56lPL",
+      "name": "ประตูโมเดิร์น 80*200",
+      "version": "3",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 35, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 6, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 10, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]"
+    },
+    {
+      "id": "a351Xv0k4yvwPlcM-Irhn",
+      "name": "บานเฟี้ยม 40*150",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]"
+    },
+    {
+      "id": "AowVkTHp8Ln4qqZsjUrSh",
+      "name": "บานเฟี้ยม 40*200",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tversion\tmaterials\n-MiN04lL3j1X7VXv56lPL\tประตูโมเดิร์น 80*200\t3\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 35, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 6, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 10, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\na351Xv0k4yvwPlcM-Irhn\tบานเฟี้ยม 40*150\t1\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\nAowVkTHp8Ln4qqZsjUrSh\tบานเฟี้ยม 40*200\t1\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\n",
+  "stderr": "",
+  "execution_time_ms": 1553
+}

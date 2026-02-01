@@ -84,13 +84,16 @@ function frontendToDb(project: Partial<Project>) {
   
   if (project.materials !== undefined) {
     result.materials = project.materials.map(m => ({
-      woodType: m.woodType || "",
-      thickness: m.thickness || 0,
-      width: m.width || 0,
-      length: m.length || 0,
-      quantity: m.quantity || 0,
-      pricePerUnit: m.pricePerUnit || 0,
+      code: m.code || "",
+      description: m.description || "",
+      usage: m.usage || "",
+      usedLength: m.usedLength || 0,
+      refQty: m.refQty || 0,
+      cost: m.cost || 0,
+      quantity: typeof m.quantity === 'number' ? m.quantity : 0,
       calculatedCost: m.calculatedCost || 0,
+      unit: m.unit || "cm",
+      isCustom: m.isCustom || false,
     }));
   }
   
@@ -236,13 +239,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         productionType: p.productionType || "Outsource",
         note: p.note || null,
         materials: p.materials?.map((m: any) => ({
-          woodType: m.woodType || "",
-          thickness: m.thickness || 0,
-          width: m.width || 0,
-          length: m.length || 0,
-          quantity: m.quantity || 0,
-          pricePerUnit: m.pricePerUnit || 0,
+          code: m.code || "",
+          description: m.description || "",
+          usage: m.usage || "",
+          usedLength: m.usedLength || 0,
+          refQty: m.refQty || 0,
+          cost: m.cost || 0,
+          quantity: typeof m.quantity === 'number' ? m.quantity : 0,
           calculatedCost: m.calculatedCost || 0,
+          unit: m.unit || "cm",
+          isCustom: m.isCustom || false,
         })) || null,
         carpenterCost: p.costs?.carpenter || 0,
         paintingCost: p.costs?.painting || 0,

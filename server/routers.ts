@@ -15,13 +15,16 @@ import { nanoid } from "nanoid";
 
 // Zod schemas for validation
 const materialSchema = z.object({
-  woodType: z.string(),
-  thickness: z.number(),
-  width: z.number(),
-  length: z.number(),
+  code: z.string(),
+  description: z.string(),
+  usage: z.string(),
+  usedLength: z.number(),
+  refQty: z.number(),
+  cost: z.number(),
   quantity: z.number(),
-  pricePerUnit: z.number(),
   calculatedCost: z.number(),
+  unit: z.string().optional(),
+  isCustom: z.boolean().optional(),
 });
 
 const channelSchema = z.object({

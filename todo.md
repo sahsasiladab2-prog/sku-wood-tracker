@@ -23,3 +23,6 @@
 ## Completed This Session
 - [x] Add search bar to Tracker page
 - [x] Create production comparison page (Outsource vs In-House)
+
+## Bug Fixes
+- [x] Fix bug: Wood material details (code, usage, length) missing when editing project - only showing price
