@@ -233,7 +233,12 @@ export default function Tracker() {
         )}
         {Object.entries(groupedProjects).map(([name, groupVersions]) => {
           const latestVersion = groupVersions[0];
+          const previousVersion = groupVersions[1]; // Get the second latest version for comparison
           const isExpanded = expandedGroup === name;
+          
+          // Calculate cost savings
+          const costSavings = previousVersion ? previousVersion.totalCost - latestVersion.totalCost : 0;
+          const isCostReduced = costSavings > 0;
 
           return (
             <Card key={name} className="neo-card bg-white overflow-hidden">
@@ -279,6 +284,26 @@ export default function Tracker() {
                       {latestVersion.totalCost.toLocaleString()}
                     </p>
                   </div>
+                  
+                  {/* Cost Savings Display (Only if there is a previous version) */}
+                  {previousVersion && (
+                    <>
+                      <div className="w-px h-8 bg-gray-300"></div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Cost Savings</p>
+                        <div className="flex items-center justify-end gap-1">
+                          {isCostReduced ? (
+                            <ArrowDown className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <ArrowUp className="w-4 h-4 text-red-500" />
+                          )}
+                          <p className={cn("font-heading text-xl font-bold", isCostReduced ? "text-green-600" : "text-red-500")}>
+                            {Math.abs(costSavings).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                   <div className="text-right">
