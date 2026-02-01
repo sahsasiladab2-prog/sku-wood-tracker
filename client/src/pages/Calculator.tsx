@@ -151,17 +151,36 @@ export default function Calculator() {
         // Sort by version descending to get the latest
         const latestProject = existingProjects.sort((a, b) => b.version - a.version)[0];
         
-        if (latestProject && latestProject.channels && latestProject.channels.length > 0) {
+        if (latestProject) {
           // Copy channels and prices from the latest version
-          setChannels(latestProject.channels.map(c => ({
-            id: crypto.randomUUID(), // Generate new IDs to avoid linking to old project
-            name: c.name,
-            price: c.price,
-            feePercent: c.feePercent || 0
-          })));
+          if (latestProject.channels && latestProject.channels.length > 0) {
+            setChannels(latestProject.channels.map(c => ({
+              id: crypto.randomUUID(), // Generate new IDs to avoid linking to old project
+              name: c.name,
+              price: c.price,
+              feePercent: c.feePercent || 0
+            })));
+          }
+
+          // Copy materials, costs, and other settings from the latest version
+          // This allows user to start v2 based on v1 data
+          if (latestProject.materials) {
+            const mappedMaterials = latestProject.materials.map(m => ({
+              ...m,
+              calculatedCost: m.calculatedCost || m.cost
+            }));
+            setSelectedWoods(mappedMaterials);
+          }
+
+          // Copy labor and other costs
+          setCarpenterCost(latestProject.costs.carpenter || "");
+          setPaintingCost(latestProject.costs.painting);
+          setPackingCost(latestProject.costs.packing);
+          setWastePercentage(latestProject.costs.wastePercentage || 5);
+          setMarginPercentage(latestProject.margin || "");
           
-          // Optional: Notify user that prices were loaded
-          // toast.info(`Loaded prices from v.${latestProject.version}`);
+          // Notify user that data was copied
+          toast.success(`Loaded data from v.${latestProject.version} for new version!`);
         }
       }
     }
