@@ -316,12 +316,9 @@ export default function Tracker() {
                       <p className="text-sm font-bold text-muted-foreground uppercase">
                         {groupVersions.length} Versions • Latest: v.{latestVersion.version}
                       </p>
-                      {latestVersion.productionType && (
-                        <Badge variant="outline" className={cn(
-                          "ml-2 border-black font-bold",
-                          latestVersion.productionType === "In-House" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"
-                        )}>
-                          {latestVersion.productionType === "In-House" ? "🏭 In-House" : "🛠️ Outsource"}
+                      {latestVersion.productionType === "In-House" && (
+                        <Badge variant="outline" className="ml-2 border-black font-bold bg-blue-100 text-blue-800">
+                          🏭 In-House
                         </Badge>
                       )}
                     </div>
@@ -485,12 +482,9 @@ export default function Tracker() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className="bg-black text-white hover:bg-black border-none text-xs px-2 py-0.5">v.{version.version}</Badge>
-                              {version.productionType && (
-                                <Badge variant="outline" className={cn(
-                                  "border-black text-[10px] px-1.5 py-0",
-                                  version.productionType === "In-House" ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700"
-                                )}>
-                                  {version.productionType}
+                              {version.productionType === "In-House" && (
+                                <Badge variant="outline" className="border-black text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700">
+                                  In-House
                                 </Badge>
                               )}
                               <span className="text-xs font-bold text-muted-foreground uppercase">ID: {version.id.slice(0, 8)}</span>

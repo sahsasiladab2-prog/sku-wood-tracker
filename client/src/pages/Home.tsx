@@ -304,12 +304,9 @@ export default function Home() {
                         <div className="flex justify-between items-baseline mb-1">
                           <h4 className="font-bold text-lg md:text-xl uppercase truncate">{project.name}</h4>
                           <div className="flex items-center gap-2">
-                            {project.productionType && (
-                              <span className={cn(
-                                "text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase",
-                                project.productionType === "In-House" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-orange-50 text-orange-700 border-orange-200"
-                              )}>
-                                {project.productionType === "In-House" ? "In-House" : "Outsource"}
+                            {project.productionType === "In-House" && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase bg-blue-50 text-blue-700 border-blue-200">
+                                In-House
                               </span>
                             )}
                             <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
