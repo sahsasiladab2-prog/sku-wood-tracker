@@ -392,7 +392,10 @@ export default function Tracker() {
                     const diffFromFirst = version.version > 1 ? calculateCostDiff(version, firstVersion) : null;
 
                     return (
-                      <div key={version.id} className="bg-white border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+                      <div key={version.id} className={cn(
+                        "border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]",
+                        version.productionType === "In-House" ? "bg-blue-50" : "bg-white"
+                      )}>
                         <div className="flex flex-col md:flex-row justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
