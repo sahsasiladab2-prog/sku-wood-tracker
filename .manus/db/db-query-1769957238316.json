@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, name, version, JSON_LENGTH(materials) as materials_count, JSON_LENGTH(channels) as channels_count, totalCost FROM projects LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2UA9PfwXiKzDe4P.4b071039320e --database 77SRbGssWJtPK3jVb4Aadc --execute SELECT id, name, version, JSON_LENGTH(materials) as materials_count, JSON_LENGTH(channels) as channels_count, totalCost FROM projects LIMIT 10;",
+  "rows": [
+    {
+      "id": "-MiN04lL3j1X7VXv56lPL",
+      "name": "ประตูโมเดิร์น 80*200",
+      "version": "3",
+      "materials_count": "4",
+      "channels_count": "2",
+      "totalCost": "835.00"
+    },
+    {
+      "id": "a351Xv0k4yvwPlcM-Irhn",
+      "name": "บานเฟี้ยม 40*150",
+      "version": "1",
+      "materials_count": "1",
+      "channels_count": "1",
+      "totalCost": "311.00"
+    },
+    {
+      "id": "AowVkTHp8Ln4qqZsjUrSh",
+      "name": "บานเฟี้ยม 40*200",
+      "version": "1",
+      "materials_count": "2",
+      "channels_count": "1",
+      "totalCost": "423.00"
+    },
+    {
+      "id": "ARS025xfv6o2NvMV-qyKA",
+      "name": "วงกบประตู 80*200",
+      "version": "1",
+      "materials_count": "2",
+      "channels_count": "2",
+      "totalCost": "617.00"
+    },
+    {
+      "id": "cECnLl_rLwqmVIpOCXMi3",
+      "name": "ประตูสายฝน 80*200",
+      "version": "1",
+      "materials_count": "4",
+      "channels_count": "NULL",
+      "totalCost": "715.00"
+    },
+    {
+      "id": "D7Rx86ykvkVo4piuYyIze",
+      "name": "วงกบกลม 80",
+      "version": "2",
+      "materials_count": "2",
+      "channels_count": "1",
+      "totalCost": "766.00"
+    },
+    {
+      "id": "DijGjXTxDAUXiKfVyES7a",
+      "name": "ประตูโมเดิร์น 80*200",
+      "version": "1",
+      "materials_count": "4",
+      "channels_count": "2",
+      "totalCost": "727.00"
+    },
+    {
+      "id": "GrKxNGv37ZGvg26KLlxin",
+      "name": "ประตูโมเดิร์น 80*200",
+      "version": "2",
+      "materials_count": "4",
+      "channels_count": "2",
+      "totalCost": "901.00"
+    },
+    {
+      "id": "hb47WY3bs5f8KQdP6vOoe",
+      "name": "บานเฟี้ยม 40*150",
+      "version": "2",
+      "materials_count": "1",
+      "channels_count": "1",
+      "totalCost": "206.00"
+    },
+    {
+      "id": "kAL1Sl5HDGXe7tu-G0ZJS",
+      "name": "วงกบประตู 80*200",
+      "version": "3",
+      "materials_count": "2",
+      "channels_count": "2",
+      "totalCost": "449.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tversion\tmaterials_count\tchannels_count\ttotalCost\n-MiN04lL3j1X7VXv56lPL\tประตูโมเดิร์น 80*200\t3\t4\t2\t835.00\na351Xv0k4yvwPlcM-Irhn\tบานเฟี้ยม 40*150\t1\t1\t1\t311.00\nAowVkTHp8Ln4qqZsjUrSh\tบานเฟี้ยม 40*200\t1\t2\t1\t423.00\nARS025xfv6o2NvMV-qyKA\tวงกบประตู 80*200\t1\t2\t2\t617.00\ncECnLl_rLwqmVIpOCXMi3\tประตูสายฝน 80*200\t1\t4\tNULL\t715.00\nD7Rx86ykvkVo4piuYyIze\tวงกบกลม 80\t2\t2\t1\t766.00\nDijGjXTxDAUXiKfVyES7a\tประตูโมเดิร์น 80*200\t1\t4\t2\t727.00\nGrKxNGv37ZGvg26KLlxin\tประตูโมเดิร์น 80*200\t2\t4\t2\t901.00\nhb47WY3bs5f8KQdP6vOoe\tบานเฟี้ยม 40*150\t2\t1\t1\t206.00\nkAL1Sl5HDGXe7tu-G0ZJS\tวงกบประตู 80*200\t3\t2\t2\t449.00\n",
+  "stderr": "",
+  "execution_time_ms": 1505
+}

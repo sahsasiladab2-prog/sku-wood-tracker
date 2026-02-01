@@ -333,23 +333,49 @@ export default function Tracker() {
                   <div className="text-right">
                     <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
                     <p className={cn("font-heading text-xl font-bold", 
-                      (latestVersion.channels && latestVersion.channels.length > 0 
-                        ? Math.max(...latestVersion.channels.map(c => c.marginPercent || 0)) 
-                        : latestVersion.margin) >= 30 ? "text-green-600" : "text-yellow-600"
+                      (() => {
+                        if (latestVersion.channels && latestVersion.channels.length > 0) {
+                          // Recalculate margin from scratch
+                          const bestMargin = Math.max(...latestVersion.channels.map(c => {
+                            const fee = Math.ceil(c.price * (c.feePercent / 100));
+                            const netProfit = c.price - latestVersion.totalCost - fee;
+                            return c.price > 0 ? (netProfit / c.price) * 100 : 0;
+                          }));
+                          return bestMargin >= 30 ? "text-green-600" : "text-yellow-600";
+                        }
+                        return latestVersion.margin >= 30 ? "text-green-600" : "text-yellow-600";
+                      })()
                     )}>
-                      {latestVersion.channels && latestVersion.channels.length > 0 
-                        ? Math.max(...latestVersion.channels.map(c => c.marginPercent || 0)) 
-                        : latestVersion.margin}%
+                      {(() => {
+                        if (latestVersion.channels && latestVersion.channels.length > 0) {
+                          // Recalculate margin from scratch
+                          const bestMargin = Math.max(...latestVersion.channels.map(c => {
+                            const fee = Math.ceil(c.price * (c.feePercent / 100));
+                            const netProfit = c.price - latestVersion.totalCost - fee;
+                            return c.price > 0 ? (netProfit / c.price) * 100 : 0;
+                          }));
+                          return bestMargin.toFixed(1);
+                        }
+                        return latestVersion.margin || 0;
+                      })()}%
                     </p>
                   </div>
                   <div className="w-px h-8 bg-gray-300"></div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-muted-foreground uppercase">Net Profit</p>
                     <p className="font-heading text-xl font-bold text-blue-600">
-                      {/* Calculate max profit from channels or default to 0 if no channels */}
-                      {(latestVersion.channels && latestVersion.channels.length > 0 
-                        ? Math.max(...latestVersion.channels.map(c => c.profit)) 
-                        : 0).toLocaleString()}
+                      {/* Calculate max profit from channels */}
+                      {(() => {
+                        if (latestVersion.channels && latestVersion.channels.length > 0) {
+                          // Recalculate profit from scratch
+                          const bestProfit = Math.max(...latestVersion.channels.map(c => {
+                            const fee = Math.ceil(c.price * (c.feePercent / 100));
+                            return c.price - latestVersion.totalCost - fee;
+                          }));
+                          return bestProfit.toLocaleString();
+                        }
+                        return "0";
+                      })()}
                     </p>
                   </div>
 
@@ -516,14 +542,21 @@ export default function Tracker() {
                                   {version.channels && version.channels.length > 0 ? (
                                     [...version.channels]
                                       .sort((a, b) => {
-                                        // Calculate real-time margin for sorting
-                                        const marginA = a.price > 0 ? (a.profit / a.price) * 100 : 0;
-                                        const marginB = b.price > 0 ? (b.profit / b.price) * 100 : 0;
+                                        // Calculate real-time margin for sorting (recalculate from scratch)
+                                        const feeA = Math.ceil(a.price * (a.feePercent / 100));
+                                        const profitA = a.price - version.totalCost - feeA;
+                                        const marginA = a.price > 0 ? (profitA / a.price) * 100 : 0;
+                                        
+                                        const feeB = Math.ceil(b.price * (b.feePercent / 100));
+                                        const profitB = b.price - version.totalCost - feeB;
+                                        const marginB = b.price > 0 ? (profitB / b.price) * 100 : 0;
                                         return marginB - marginA;
                                       })
                                       .map((ch, idx) => {
                                         // Calculate real-time margin for display: (Net Profit / Selling Price) * 100
-                                        const realMargin = ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0";
+                                        const fee = Math.ceil(ch.price * (ch.feePercent / 100));
+                                        const netProfit = ch.price - version.totalCost - fee;
+                                        const realMargin = ch.price > 0 ? ((netProfit / ch.price) * 100).toFixed(1) : "0.0";
                                         const marginVal = parseFloat(realMargin);
                                         
                                         return (
@@ -531,7 +564,7 @@ export default function Tracker() {
                                             "border-none font-bold text-white",
                                             marginVal >= 30 ? "bg-green-500" : marginVal >= 15 ? "bg-yellow-500" : "bg-red-500"
                                           )}>
-                                            {parseFloat(ch.price > 0 ? ((ch.profit / ch.price) * 100).toFixed(1) : "0.0")}% ({ch.name})
+                                            {realMargin}% ({ch.name})
                                           </Badge>
                                         );
                                       })
@@ -575,10 +608,9 @@ export default function Tracker() {
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                   {version.channels.map((channel) => {
-                                    // Recalculate net profit if feePercent exists (for backward compatibility or display logic)
-                                    // Note: channel.profit should already be net profit from Calculator logic, 
-                                    // but let's display the breakdown if possible or just the net result.
-                                    // The saved 'profit' in DB is already Net Profit based on Calculator logic update.
+                                    // Recalculate net profit from scratch using totalCost
+                                    const fee = Math.ceil(channel.price * (channel.feePercent / 100));
+                                    const netProfit = channel.price - version.totalCost - fee;
                                     
                                     return (
                                       <div key={channel.id} className="bg-purple-50 border border-purple-200 p-2 rounded text-xs">
@@ -592,14 +624,14 @@ export default function Tracker() {
                                             <div className="flex justify-between items-center text-red-500/80">
                                               <span className="text-[10px]">Fee ({channel.feePercent}%):</span>
                                               <span className="font-bold text-[10px]">
-                                                -{Math.ceil(channel.price * (channel.feePercent / 100)).toLocaleString()}
+                                                -{fee.toLocaleString()}
                                               </span>
                                             </div>
                                           )}
                                           <div className="flex justify-between items-center pt-1 mt-1 border-t border-purple-200">
                                           <span className="text-muted-foreground font-bold">Net Profit:</span>
-                                            <span className={cn("font-bold", channel.profit >= 0 ? "text-green-600" : "text-red-600")}>
-                                              {channel.profit.toLocaleString()}
+                                            <span className={cn("font-bold", netProfit >= 0 ? "text-green-600" : "text-red-600")}>
+                                              {netProfit.toLocaleString()}
                                             </span>
                                           </div>
                                         </div>

@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, name, version, materials, channels, totalCost FROM projects LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2UA9PfwXiKzDe4P.4b071039320e --database 77SRbGssWJtPK3jVb4Aadc --execute SELECT id, name, version, materials, channels, totalCost FROM projects LIMIT 5;",
+  "rows": [
+    {
+      "id": "-MiN04lL3j1X7VXv56lPL",
+      "name": "ประตูโมเดิร์น 80*200",
+      "version": "3",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 35, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 6, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 10, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]",
+      "channels": "[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 1690}, {\"feePercent\": 27.61, \"name\": \"Sp.Tb\", \"price\": 1699}]",
+      "totalCost": "835.00"
+    },
+    {
+      "id": "a351Xv0k4yvwPlcM-Irhn",
+      "name": "บานเฟี้ยม 40*150",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]",
+      "channels": "[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 699}]",
+      "totalCost": "311.00"
+    },
+    {
+      "id": "AowVkTHp8Ln4qqZsjUrSh",
+      "name": "บานเฟี้ยม 40*200",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]",
+      "channels": "[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 999}]",
+      "totalCost": "423.00"
+    },
+    {
+      "id": "ARS025xfv6o2NvMV-qyKA",
+      "name": "วงกบประตู 80*200",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 180, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 80, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]",
+      "channels": "[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 925}, {\"feePercent\": 27.61, \"name\": \"Sp.Tb\", \"price\": 880}]",
+      "totalCost": "617.00"
+    },
+    {
+      "id": "cECnLl_rLwqmVIpOCXMi3",
+      "name": "ประตูสายฝน 80*200",
+      "version": "1",
+      "materials": "[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 50, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 20, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 25, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 9, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]",
+      "channels": "NULL",
+      "totalCost": "715.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tversion\tmaterials\tchannels\ttotalCost\n-MiN04lL3j1X7VXv56lPL\tประตูโมเดิร์น 80*200\t3\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 35, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 6, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 10, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\t[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 1690}, {\"feePercent\": 27.61, \"name\": \"Sp.Tb\", \"price\": 1699}]\t835.00\na351Xv0k4yvwPlcM-Irhn\tบานเฟี้ยม 40*150\t1\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\t[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 699}]\t311.00\nAowVkTHp8Ln4qqZsjUrSh\tบานเฟี้ยม 40*200\t1\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 30, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\t[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 999}]\t423.00\nARS025xfv6o2NvMV-qyKA\tวงกบประตู 80*200\t1\t[{\"calculatedCost\": 180, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 80, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 1, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\t[{\"feePercent\": 27.61, \"name\": \"Sp.De\", \"price\": 925}, {\"feePercent\": 27.61, \"name\": \"Sp.Tb\", \"price\": 880}]\t617.00\ncECnLl_rLwqmVIpOCXMi3\tประตูสายฝน 80*200\t1\t[{\"calculatedCost\": 110, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 50, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 20, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 2, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}, {\"calculatedCost\": 25, \"length\": 0, \"pricePerUnit\": 0, \"quantity\": 9, \"thickness\": 0, \"width\": 0, \"woodType\": \"\"}]\tNULL\t715.00\n",
+  "stderr": "",
+  "execution_time_ms": 1547
+}
