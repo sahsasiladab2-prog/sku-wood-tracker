@@ -200,6 +200,72 @@ export const appRouter = router({
         const count = await bulkCreateProjects(projectsToInsert);
         return { success: true, count };
       }),
+
+    // Import projects from JSON file (exported data)
+    importFromJson: protectedProcedure
+      .input(z.object({ 
+        projects: z.array(z.any()),
+        mode: z.enum(["merge", "replace"]).default("merge")
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Transform exported JSON format to DB format
+        const projectsToInsert = input.projects.map((p: any) => {
+          // Generate new ID to avoid conflicts
+          const newId = nanoid(8).toUpperCase();
+          
+          // Handle materials - convert from export format
+          let materials = null;
+          if (p.materials && Array.isArray(p.materials)) {
+            materials = p.materials.map((m: any) => ({
+              code: m.code || "CUSTOM",
+              description: m.description || "Imported Item",
+              usage: m.usage || "",
+              usedLength: m.usedLength || m.length || 0,
+              refQty: m.refQty || 100,
+              cost: m.cost || m.pricePerUnit || m.calculatedCost || 0,
+              quantity: typeof m.quantity === 'number' ? m.quantity : 1,
+              calculatedCost: m.calculatedCost || 0,
+              unit: m.unit || "cm",
+              isCustom: m.isCustom || false,
+            }));
+          }
+          
+          // Handle channels
+          let channels = null;
+          if (p.channels && Array.isArray(p.channels)) {
+            channels = p.channels.map((c: any) => ({
+              name: c.name || "Default",
+              price: c.price || 0,
+              feePercent: c.feePercent || 0,
+            }));
+          }
+          
+          // Handle costs - support both old and new format
+          const carpenterCost = p.costs?.carpenter || p.carpenterCost || 0;
+          const paintingCost = p.costs?.painting || p.paintingCost || 0;
+          const packingCost = p.costs?.packing || p.packingCost || 0;
+          const wasteCost = p.costs?.waste || p.wasteCost || 0;
+          
+          return {
+            id: newId,
+            userId: ctx.user.id,
+            name: p.name || "Imported Project",
+            version: p.version || 1,
+            productionType: p.productionType || "Outsource",
+            note: p.note || null,
+            materials,
+            carpenterCost: String(carpenterCost),
+            paintingCost: String(paintingCost),
+            packingCost: String(packingCost),
+            wasteCost: String(wasteCost),
+            channels,
+            totalCost: String(p.totalCost || 0),
+          };
+        });
+
+        const count = await bulkCreateProjects(projectsToInsert);
+        return { success: true, count, imported: projectsToInsert.length };
+      }),
   }),
 });
 

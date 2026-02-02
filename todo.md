@@ -14,7 +14,7 @@
 - [x] API routes for CRUD operations
 
 ## Pending Features
-- [ ] Import data functionality
+- [x] Import data functionality
 - [ ] Search/filter SKUs in Tracker page
 - [ ] Production comparison page (Outsource vs In-House)
 - [ ] Cost trend analysis charts
@@ -23,6 +23,7 @@
 ## Completed This Session
 - [x] Add search bar to Tracker page
 - [x] Create production comparison page (Outsource vs In-House)
+- [x] Add Import Data functionality (JSON file upload)
 
 ## Bug Fixes
 - [x] Fix bug: Wood material details (code, usage, length) missing when editing project - only showing price

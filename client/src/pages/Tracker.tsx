@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, TrendingUp, Tag, Search, GitCompare } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, Upload, TrendingUp, Tag, Search, GitCompare, FileJson, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,63 @@ export default function Tracker() {
   const [selectedVersionForSim, setSelectedVersionForSim] = useState<typeof projects[0] | null>(null);
   const [simCostMultiplier, setSimCostMultiplier] = useState(100); // 100%
   const [simPriceMultiplier, setSimPriceMultiplier] = useState(100); // 100%
+
+  // Import State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[] | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
+  const importMutation = trpc.project.importFromJson.useMutation({
+    onSuccess: (data) => {
+      utils.project.list.invalidate();
+      toast.success(`นำเข้าข้อมูลสำเร็จ! ${data.imported} รายการ`);
+      setIsImportModalOpen(false);
+      setImportPreview(null);
+      setIsImporting(false);
+    },
+    onError: (error) => {
+      toast.error("นำเข้าข้อมูลล้มเหลว: " + error.message);
+      setIsImporting(false);
+    },
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        
+        // Validate it's an array
+        if (!Array.isArray(data)) {
+          toast.error("ไฟล์ไม่ถูกต้อง: ต้องเป็น Array ของ Projects");
+          return;
+        }
+        
+        setImportPreview(data);
+        setIsImportModalOpen(true);
+      } catch (err) {
+        toast.error("ไม่สามารถอ่านไฟล์ JSON ได้");
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importPreview || importPreview.length === 0) return;
+    
+    setIsImporting(true);
+    importMutation.mutate({ projects: importPreview, mode: "merge" });
+  };
 
   const openSimModal = (version: typeof projects[0]) => {
     setSelectedVersionForSim(version);
@@ -191,7 +249,15 @@ export default function Tracker() {
             Track progress, complete quests, and level up!
           </p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex gap-2 w-full md:w-auto flex-wrap">
+          {/* Hidden file input for import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".json"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           <Button 
             variant="outline"
             className="flex-1 md:flex-none neo-button bg-white text-black border-2 border-black hover:bg-gray-100 h-12 px-4"
@@ -207,6 +273,13 @@ export default function Tracker() {
             }}
           >
             <Download className="mr-2 h-5 w-5" /> Export Data
+          </Button>
+          <Button 
+            variant="outline"
+            className="flex-1 md:flex-none neo-button bg-green-50 text-green-700 border-2 border-green-300 hover:bg-green-100 h-12 px-4"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="mr-2 h-5 w-5" /> Import Data
           </Button>
           <Link href="/compare" className="flex-1 md:flex-none">
             <Button variant="outline" className="w-full neo-button bg-purple-100 text-purple-700 border-2 border-purple-300 hover:bg-purple-200 h-12 px-4">
@@ -888,6 +961,81 @@ export default function Tracker() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPriceModalOpen(false)} className="border-black">Cancel</Button>
             <Button onClick={savePrices} className="bg-black text-white hover:bg-gray-800">Save Prices</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Data Modal */}
+      <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+        <DialogContent className="max-w-md md:max-w-lg bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
+              <FileJson className="w-5 h-5 text-green-600" /> นำเข้าข้อมูล
+            </DialogTitle>
+            <DialogDescription>
+              ตรวจสอบข้อมูลก่อนนำเข้า ข้อมูลจะถูกเพิ่มเข้าไปในระบบ (ไม่ลบข้อมูลเดิม)
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {importPreview && (
+              <>
+                <div className="bg-green-50 p-4 rounded border-2 border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <span className="font-bold text-green-700">พบข้อมูล {importPreview.length} รายการ</span>
+                  </div>
+                  <p className="text-sm text-green-600">พร้อมนำเข้าสู่ระบบ</p>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2">
+                  {importPreview.slice(0, 10).map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-200">
+                      <div>
+                        <div className="font-bold text-sm">{item.name || "Unnamed"}</div>
+                        <div className="text-xs text-muted-foreground">v.{item.version || 1}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm">{(item.totalCost || 0).toLocaleString()} THB</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.materials?.length || 0} วัสดุ
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {importPreview.length > 10 && (
+                    <div className="text-center text-sm text-muted-foreground py-2">
+                      ... และอีก {importPreview.length - 10} รายการ
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsImportModalOpen(false);
+                setImportPreview(null);
+              }} 
+              className="border-black"
+              disabled={isImporting}
+            >
+              ยกเลิก
+            </Button>
+            <Button 
+              onClick={handleImport} 
+              className="bg-green-600 text-white hover:bg-green-700"
+              disabled={isImporting || !importPreview}
+            >
+              {isImporting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> กำลังนำเข้า...</>
+              ) : (
+                <><Upload className="mr-2 h-4 w-4" /> นำเข้าข้อมูล</>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
