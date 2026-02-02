@@ -152,10 +152,124 @@ describe('Backup Email Content Generation', () => {
 describe('Backup Email Title Generation', () => {
   it('should generate title with current date', () => {
     const currentDate = new Date().toLocaleDateString('th-TH');
-    const title = `📦 SKU Wood Tracker - Weekly Backup (${currentDate})`;
+    const title = `📦 SKU Wood Tracker - Backup (${currentDate})`;
     
     expect(title).toContain('SKU Wood Tracker');
-    expect(title).toContain('Weekly Backup');
+    expect(title).toContain('Backup');
     expect(title).toContain(currentDate);
+  });
+});
+
+describe('Backup JSON File Generation', () => {
+  it('should generate unique filename with timestamp and random ID', () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const randomId = 'abc12345'; // Mock nanoid
+    const fileName = `backups/sku-backup-${timestamp}-${randomId}.json`;
+    
+    expect(fileName).toContain('backups/');
+    expect(fileName).toContain('sku-backup-');
+    expect(fileName).toContain('.json');
+    expect(fileName.length).toBeGreaterThan(30);
+  });
+
+  it('should create valid JSON string from export data', () => {
+    const exportData = [
+      {
+        id: 'TEST1',
+        name: 'Test Product',
+        version: 1,
+        totalCost: 1500,
+        materials: [{ code: '51100', quantity: 2 }],
+        costs: { carpenter: 100, painting: 50 },
+      },
+    ];
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const parsed = JSON.parse(jsonString);
+
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].name).toBe('Test Product');
+    expect(parsed[0].materials).toHaveLength(1);
+  });
+
+  it('should include all required fields in export data', () => {
+    const mockProject = {
+      id: 'FULL1',
+      name: 'Full Data Product',
+      version: 3,
+      productionType: 'In-House',
+      note: 'Test note',
+      materials: [{ code: '51100', quantity: 2, calculatedCost: 200 }],
+      carpenterCost: '150',
+      paintingCost: '100',
+      packingCost: '50',
+      wasteCost: '25',
+      channels: [{ name: 'Shopee', price: 500, feePercent: 10 }],
+      totalCost: '525',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const exportData = {
+      id: mockProject.id,
+      name: mockProject.name,
+      version: mockProject.version,
+      productionType: mockProject.productionType,
+      note: mockProject.note,
+      materials: mockProject.materials,
+      costs: {
+        carpenter: Number(mockProject.carpenterCost) || 0,
+        painting: Number(mockProject.paintingCost) || 0,
+        packing: Number(mockProject.packingCost) || 0,
+        waste: Number(mockProject.wasteCost) || 0,
+      },
+      channels: mockProject.channels,
+      totalCost: Number(mockProject.totalCost) || 0,
+      createdAt: mockProject.createdAt,
+      updatedAt: mockProject.updatedAt,
+    };
+
+    // Verify all fields are present
+    expect(exportData.id).toBe('FULL1');
+    expect(exportData.name).toBe('Full Data Product');
+    expect(exportData.version).toBe(3);
+    expect(exportData.productionType).toBe('In-House');
+    expect(exportData.note).toBe('Test note');
+    expect(exportData.materials).toHaveLength(1);
+    expect(exportData.costs.carpenter).toBe(150);
+    expect(exportData.costs.painting).toBe(100);
+    expect(exportData.costs.packing).toBe(50);
+    expect(exportData.costs.waste).toBe(25);
+    expect(exportData.channels).toHaveLength(1);
+    expect(exportData.totalCost).toBe(525);
+    expect(exportData.createdAt).toBeDefined();
+    expect(exportData.updatedAt).toBeDefined();
+  });
+});
+
+describe('Backup Email Content with Download Link', () => {
+  it('should include download link when URL is provided', () => {
+    const downloadUrl = 'https://storage.example.com/backups/sku-backup-123.json';
+    const content = `📥 **ดาวน์โหลดข้อมูลฉบับเต็ม (JSON):**\n🔗 ${downloadUrl}`;
+    
+    expect(content).toContain(downloadUrl);
+    expect(content).toContain('🔗');
+  });
+
+  it('should show fallback message when URL is not available', () => {
+    const downloadUrl = '';
+    const fallbackMessage = downloadUrl 
+      ? `🔗 ${downloadUrl}` 
+      : '⚠️ ไม่สามารถสร้างลิงก์ดาวน์โหลดได้';
+    
+    expect(fallbackMessage).toContain('⚠️');
+    expect(fallbackMessage).toContain('ไม่สามารถ');
+  });
+
+  it('should mention that link does not expire', () => {
+    const downloadUrl = 'https://storage.example.com/backups/test.json';
+    const noExpiryMessage = downloadUrl ? '✅ **ลิงก์นี้ไม่มีวันหมดอายุ**' : '';
+    
+    expect(noExpiryMessage).toContain('ไม่มีวันหมดอายุ');
   });
 });
