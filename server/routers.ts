@@ -9,8 +9,10 @@ import {
   createProject, 
   updateProject, 
   deleteProject,
-  bulkCreateProjects 
+  bulkCreateProjects,
+  getAllProjects 
 } from "./db";
+import { notifyOwner } from "./_core/notification";
 import { nanoid } from "nanoid";
 
 // Zod schemas for validation
@@ -199,6 +201,84 @@ export const appRouter = router({
 
         const count = await bulkCreateProjects(projectsToInsert);
         return { success: true, count };
+      }),
+
+    // Send backup email to owner
+    sendBackupEmail: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        // Get all projects for the current user
+        const projects = await getProjectsByUserId(ctx.user.id);
+        
+        // Convert to export format
+        const exportData = projects.map(p => ({
+          id: p.id,
+          name: p.name,
+          version: p.version,
+          productionType: p.productionType,
+          note: p.note,
+          materials: p.materials,
+          costs: {
+            carpenter: Number(p.carpenterCost) || 0,
+            painting: Number(p.paintingCost) || 0,
+            packing: Number(p.packingCost) || 0,
+            waste: Number(p.wasteCost) || 0,
+          },
+          channels: p.channels,
+          totalCost: Number(p.totalCost) || 0,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        }));
+
+        // Create backup summary
+        const totalSkus = projects.length;
+        const totalCost = exportData.reduce((sum, p) => sum + p.totalCost, 0);
+        const backupDate = new Date().toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        // Create email content
+        const title = `📦 SKU Wood Tracker - Weekly Backup (${new Date().toLocaleDateString('th-TH')})`;
+        const content = `
+🔔 **รายงานสำรองข้อมูลอัตโนมัติ**
+
+📅 วันที่: ${backupDate}
+📊 จำนวน SKU ทั้งหมด: ${totalSkus} รายการ
+💰 มูลค่าต้นทุนรวม: ฿${totalCost.toLocaleString()}
+
+---
+
+📋 **รายการ SKU ล่าสุด (10 รายการแรก):**
+${exportData.slice(0, 10).map((p, i) => 
+  `${i + 1}. ${p.name} (v.${p.version}) - ฿${p.totalCost.toLocaleString()}`
+).join('\n')}
+${totalSkus > 10 ? `\n... และอีก ${totalSkus - 10} รายการ` : ''}
+
+---
+
+📥 **วิธีดาวน์โหลดข้อมูลฉบับเต็ม:**
+1. เข้าสู่ระบบ SKU Wood Tracker
+2. ไปที่หน้า Tracker
+3. กดปุ่ม "Export Data" เพื่อดาวน์โหลดไฟล์ JSON
+
+💡 **เคล็ดลับ:** เก็บไฟล์ JSON ไว้ใน Google Drive หรือ Dropbox เพื่อความปลอดภัยเพิ่มเติม
+
+---
+ระบบสำรองข้อมูลอัตโนมัติ SKU Wood Tracker
+        `.trim();
+
+        // Send notification
+        const sent = await notifyOwner({ title, content });
+        
+        return { 
+          success: sent, 
+          totalSkus, 
+          backupDate,
+          message: sent ? 'Backup email sent successfully' : 'Failed to send backup email'
+        };
       }),
 
     // Import projects from JSON file (exported data)

@@ -24,6 +24,7 @@
 - [x] Add search bar to Tracker page
 - [x] Create production comparison page (Outsource vs In-House)
 - [x] Add Import Data functionality (JSON file upload)
+- [x] Auto Email Backup - weekly backup sent to owner's email
 
 ## Bug Fixes
 - [x] Fix bug: Wood material details (code, usage, length) missing when editing project - only showing price

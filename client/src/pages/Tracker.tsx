@@ -41,6 +41,9 @@ export default function Tracker() {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
+
+  // Backup State
+  const [isSendingBackup, setIsSendingBackup] = useState(false);
   const importMutation = trpc.project.importFromJson.useMutation({
     onSuccess: (data) => {
       utils.project.list.invalidate();
@@ -54,6 +57,26 @@ export default function Tracker() {
       setIsImporting(false);
     },
   });
+
+  const backupMutation = trpc.project.sendBackupEmail.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success(`📧 ส่ง Backup Email สำเร็จ! (${data.totalSkus} SKUs)`);
+      } else {
+        toast.error("ไม่สามารถส่ง Email ได้ กรุณาลองใหม่อีกครั้ง");
+      }
+      setIsSendingBackup(false);
+    },
+    onError: (error) => {
+      toast.error("ส่ง Backup Email ล้มเหลว: " + error.message);
+      setIsSendingBackup(false);
+    },
+  });
+
+  const handleSendBackup = () => {
+    setIsSendingBackup(true);
+    backupMutation.mutate();
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -281,6 +304,27 @@ export default function Tracker() {
           >
             <Upload className="mr-2 h-5 w-5" /> Import Data
           </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline"
+                  className="flex-1 md:flex-none neo-button bg-blue-50 text-blue-700 border-2 border-blue-300 hover:bg-blue-100 h-12 px-4"
+                  onClick={handleSendBackup}
+                  disabled={isSendingBackup}
+                >
+                  {isSendingBackup ? (
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> กำลังส่ง...</>
+                  ) : (
+                    <>📧 Backup Email</>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>ส่งสรุปข้อมูล SKU ไปทาง Email</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Link href="/compare" className="flex-1 md:flex-none">
             <Button variant="outline" className="w-full neo-button bg-purple-100 text-purple-700 border-2 border-purple-300 hover:bg-purple-200 h-12 px-4">
               <GitCompare className="mr-2 h-5 w-5" /> เปรียบเทียบ

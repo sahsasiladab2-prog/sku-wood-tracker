@@ -179,3 +179,19 @@ export async function bulkCreateProjects(projectList: InsertProject[]): Promise<
   
   return projectList.length;
 }
+
+// Get all projects (for admin backup)
+export async function getAllProjects(): Promise<Project[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get all projects: database not available");
+    return [];
+  }
+
+  const result = await db
+    .select()
+    .from(projects)
+    .orderBy(desc(projects.createdAt));
+
+  return result;
+}
