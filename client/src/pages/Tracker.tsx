@@ -458,124 +458,145 @@ export default function Tracker() {
           </div>
         )}
         {Object.entries(groupedProjects).map(([name, groupVersions]) => {
-          const latestVersion = groupVersions[0];
-          const previousVersion = groupVersions[1]; // Get the second latest version for comparison
           const isExpanded = expandedGroup === name;
           
-          // Calculate cost savings
-          const costSavings = previousVersion ? previousVersion.totalCost - latestVersion.totalCost : 0;
-          const isCostReduced = costSavings > 0;
+          // Separate versions by production type
+          const inHouseVersions = groupVersions.filter(v => v.productionType === "In-House");
+          const outsourceVersions = groupVersions.filter(v => v.productionType !== "In-House");
+          
+          // Get latest version for each production type
+          const latestInHouse = inHouseVersions[0];
+          const latestOutsource = outsourceVersions[0];
+          
+          // Overall latest version (for version count display)
+          const latestVersion = groupVersions[0];
+          
+          // Helper function to calculate metrics for a version
+          const getVersionMetrics = (version: typeof groupVersions[0] | undefined) => {
+            if (!version) return null;
+            let bestMargin = 0;
+            let bestProfit = 0;
+            if (version.channels && version.channels.length > 0) {
+              version.channels.forEach(c => {
+                const fee = Math.ceil(c.price * (c.feePercent / 100));
+                const netProfit = c.price - version.totalCost - fee;
+                const margin = c.price > 0 ? (netProfit / c.price) * 100 : 0;
+                if (margin > bestMargin) {
+                  bestMargin = margin;
+                  bestProfit = netProfit;
+                }
+              });
+            }
+            return { margin: bestMargin, profit: bestProfit, cost: version.totalCost, version: version.version };
+          };
+          
+          const inHouseMetrics = getVersionMetrics(latestInHouse);
+          const outsourceMetrics = getVersionMetrics(latestOutsource);
 
           return (
             <Card key={name} className="neo-card bg-white overflow-hidden">
               {/* Group Header */}
               <div 
-                className="p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => toggleGroup(name)}
               >
-<div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-chart-1 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-                    <Folder className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
-                    <div className="flex flex-wrap gap-2 mt-1 items-center">
-                      <p className="text-sm font-bold text-muted-foreground uppercase">
-                        {groupVersions.length} Versions • Latest: v.{latestVersion.version}
-                      </p>
-                      {latestVersion.productionType === "In-House" ? (
-                        <Badge variant="outline" className="ml-2 border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
-                          🏭 In-House
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="ml-2 border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
-                          📦 Outsource
-                        </Badge>
-                      )}
+                {/* SKU Name Row */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-chart-1 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
+                      <Folder className="w-6 h-6 text-white" />
                     </div>
-                  </div>
-                </div>
-                
-                {/* Latest Version Summary Metrics */}
-                <div className="hidden md:flex items-center gap-6 mr-8">
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
-                    <p className={cn("font-heading text-xl font-bold", 
-                      (() => {
-                        if (latestVersion.channels && latestVersion.channels.length > 0) {
-                          // Recalculate margin from scratch
-                          const bestMargin = Math.max(...latestVersion.channels.map(c => {
-                            const fee = Math.ceil(c.price * (c.feePercent / 100));
-                            const netProfit = c.price - latestVersion.totalCost - fee;
-                            return c.price > 0 ? (netProfit / c.price) * 100 : 0;
-                          }));
-                          return bestMargin >= 30 ? "text-green-600" : "text-yellow-600";
-                        }
-                        return latestVersion.margin >= 30 ? "text-green-600" : "text-yellow-600";
-                      })()
-                    )}>
-                      {(() => {
-                        if (latestVersion.channels && latestVersion.channels.length > 0) {
-                          // Recalculate margin from scratch
-                          const bestMargin = Math.max(...latestVersion.channels.map(c => {
-                            const fee = Math.ceil(c.price * (c.feePercent / 100));
-                            const netProfit = c.price - latestVersion.totalCost - fee;
-                            return c.price > 0 ? (netProfit / c.price) * 100 : 0;
-                          }));
-                          return bestMargin.toFixed(1);
-                        }
-                        return latestVersion.margin || 0;
-                      })()}%
-                    </p>
-                  </div>
-                  <div className="w-px h-8 bg-gray-300"></div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Net Profit</p>
-                    <p className="font-heading text-xl font-bold text-blue-600">
-                      {/* Calculate max profit from channels */}
-                      {(() => {
-                        if (latestVersion.channels && latestVersion.channels.length > 0) {
-                          // Recalculate profit from scratch
-                          const bestProfit = Math.max(...latestVersion.channels.map(c => {
-                            const fee = Math.ceil(c.price * (c.feePercent / 100));
-                            return c.price - latestVersion.totalCost - fee;
-                          }));
-                          return bestProfit.toLocaleString();
-                        }
-                        return "0";
-                      })()}
-                    </p>
-                  </div>
-
-                  
-                  {/* Cost Savings Display (Only if there is a previous version) */}
-                  {previousVersion && (
-                    <>
-                      <div className="w-px h-8 bg-gray-300"></div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Cost Savings</p>
-                        <div className="flex items-center justify-end gap-1">
-                          {isCostReduced ? (
-                            <ArrowDown className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <ArrowUp className="w-4 h-4 text-red-500" />
-                          )}
-                          <p className={cn("font-heading text-xl font-bold", isCostReduced ? "text-green-600" : "text-red-500")}>
-                            {Math.abs(costSavings).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                  <div className="text-right">
-                    <p className="font-bold text-xs text-muted-foreground uppercase">Latest Cost</p>
-                    <p className="font-heading text-xl font-bold">{latestVersion.totalCost.toLocaleString()} THB</p>
+                    <div>
+                      <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
+                      <p className="text-sm font-bold text-muted-foreground uppercase">
+                        {groupVersions.length} Versions
+                      </p>
+                    </div>
                   </div>
                   <Button variant="ghost" size="icon" className="border-2 border-black/10">
                     {isExpanded ? <ChevronUp /> : <ChevronDown />}
                   </Button>
+                </div>
+                
+                {/* Production Type Metrics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* In-House Section */}
+                  <div className={cn(
+                    "border-2 p-3 rounded-lg",
+                    inHouseMetrics ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-gray-50"
+                  )}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
+                        🏭 In-House
+                      </Badge>
+                      {inHouseMetrics && (
+                        <span className="text-xs font-bold text-muted-foreground">v.{inHouseMetrics.version}</span>
+                      )}
+                    </div>
+                    {inHouseMetrics ? (
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
+                          <p className={cn("font-heading text-lg font-bold", inHouseMetrics.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
+                            {inHouseMetrics.margin.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Profit</p>
+                          <p className="font-heading text-lg font-bold text-blue-600">
+                            {inHouseMetrics.profit.toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Cost</p>
+                          <p className="font-heading text-lg font-bold">
+                            {inHouseMetrics.cost.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">ยังไม่มีข้อมูล</p>
+                    )}
+                  </div>
+                  
+                  {/* Outsource Section */}
+                  <div className={cn(
+                    "border-2 p-3 rounded-lg",
+                    outsourceMetrics ? "border-orange-300 bg-orange-50" : "border-gray-200 bg-gray-50"
+                  )}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
+                        📦 Outsource
+                      </Badge>
+                      {outsourceMetrics && (
+                        <span className="text-xs font-bold text-muted-foreground">v.{outsourceMetrics.version}</span>
+                      )}
+                    </div>
+                    {outsourceMetrics ? (
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
+                          <p className={cn("font-heading text-lg font-bold", outsourceMetrics.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
+                            {outsourceMetrics.margin.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Profit</p>
+                          <p className="font-heading text-lg font-bold text-blue-600">
+                            {outsourceMetrics.profit.toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Cost</p>
+                          <p className="font-heading text-lg font-bold">
+                            {outsourceMetrics.cost.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">ยังไม่มีข้อมูล</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
