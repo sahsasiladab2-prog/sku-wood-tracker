@@ -27,6 +27,7 @@
 - [x] Auto Email Backup - weekly backup sent to owner's email
 - [x] Enhance Backup Email to include JSON download link (full data)
 - [x] Add Production Type badge (In-House/Outsource) to SKU cards in Tracker
+- [x] Add Production Type filter (In-House/Outsource/All) to Tracker page
 
 ## Bug Fixes
 - [x] Fix bug: Wood material details (code, usage, length) missing when editing project - only showing price

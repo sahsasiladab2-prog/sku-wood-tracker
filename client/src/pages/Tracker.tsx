@@ -23,6 +23,7 @@ export default function Tracker() {
   const { projects, deleteProject, updateProject } = useProjects();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [productionTypeFilter, setProductionTypeFilter] = useState<"all" | "In-House" | "Outsource">("all");
   
   // Manage Prices State
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
@@ -166,14 +167,20 @@ export default function Tracker() {
     }
   };
 
-  // Filter projects by search query
-  const filteredProjects = searchQuery.trim() 
-    ? projects.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.note && p.note.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : projects;
+  // Filter projects by search query and production type
+  const filteredProjects = projects.filter(p => {
+    // Search filter
+    const matchesSearch = !searchQuery.trim() || 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.note && p.note.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Production type filter
+    const matchesProductionType = productionTypeFilter === "all" || 
+      p.productionType === productionTypeFilter;
+    
+    return matchesSearch && matchesProductionType;
+  });
 
   // Group projects by name
   const groupedProjects = filteredProjects.reduce((acc, project) => {
@@ -338,24 +345,67 @@ export default function Tracker() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <Input
-          type="text"
-          placeholder="ค้นหา SKU ตามชื่อ, ID, หรือโน้ต..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 h-12 border-2 border-black shadow-[3px_3px_0px_0px_#000000] text-lg font-medium"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold"
+      {/* Search Bar and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            type="text"
+            placeholder="ค้นหา SKU ตามชื่อ, ID, หรือโน้ต..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-12 border-2 border-black shadow-[3px_3px_0px_0px_#000000] text-lg font-medium"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        
+        {/* Production Type Filter */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setProductionTypeFilter("all")}
+            className={cn(
+              "h-12 px-4 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold transition-all",
+              productionTypeFilter === "all" 
+                ? "bg-gray-800 text-white hover:bg-gray-700" 
+                : "bg-white text-black hover:bg-gray-100"
+            )}
           >
-            ✕
-          </button>
-        )}
+            ทั้งหมด
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setProductionTypeFilter("In-House")}
+            className={cn(
+              "h-12 px-4 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold transition-all",
+              productionTypeFilter === "In-House" 
+                ? "bg-blue-500 text-white hover:bg-blue-600 border-blue-600" 
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-300"
+            )}
+          >
+            🏭 In-House
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setProductionTypeFilter("Outsource")}
+            className={cn(
+              "h-12 px-4 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold transition-all",
+              productionTypeFilter === "Outsource" 
+                ? "bg-orange-500 text-white hover:bg-orange-600 border-orange-600" 
+                : "bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-300"
+            )}
+          >
+            📦 Outsource
+          </Button>
+        </div>
       </div>
 
       {/* Gamification Header */}
