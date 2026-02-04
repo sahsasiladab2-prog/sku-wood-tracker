@@ -175,19 +175,26 @@ export default function Tracker() {
       )
     : projects;
 
-  // Group projects by name
+  // Group projects by name AND productionType (so Outsource and In-House are separate)
   const groupedProjects = filteredProjects.reduce((acc, project) => {
-    if (!acc[project.name]) {
-      acc[project.name] = [];
+    const groupKey = `${project.name}|||${project.productionType || 'Outsource'}`;
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
     }
-    acc[project.name].push(project);
+    acc[groupKey].push(project);
     return acc;
   }, {} as Record<string, typeof projects>);
 
   // Sort versions within groups
-  Object.keys(groupedProjects).forEach(name => {
-    groupedProjects[name].sort((a, b) => b.version - a.version); // Newest version first
+  Object.keys(groupedProjects).forEach(groupKey => {
+    groupedProjects[groupKey].sort((a, b) => b.version - a.version); // Newest version first
   });
+
+  // Helper to parse group key
+  const parseGroupKey = (groupKey: string) => {
+    const [name, productionType] = groupKey.split('|||');
+    return { name, productionType: productionType || 'Outsource' };
+  };
 
   const toggleGroup = (name: string) => {
     setExpandedGroup(expandedGroup === name ? null : name);
@@ -407,37 +414,37 @@ export default function Tracker() {
             </Link>
           </div>
         )}
-        {Object.entries(groupedProjects).map(([name, groupVersions]) => {
+        {Object.entries(groupedProjects).map(([groupKey, groupVersions]) => {
+          const { name: skuName, productionType } = parseGroupKey(groupKey);
           const latestVersion = groupVersions[0];
           const previousVersion = groupVersions[1]; // Get the second latest version for comparison
-          const isExpanded = expandedGroup === name;
+          const isExpanded = expandedGroup === groupKey;
+          const isInHouse = productionType === "In-House";
           
           // Calculate cost savings
           const costSavings = previousVersion ? previousVersion.totalCost - latestVersion.totalCost : 0;
           const isCostReduced = costSavings > 0;
 
           return (
-            <Card key={name} className="neo-card bg-white overflow-hidden">
+            <Card key={groupKey} className={cn("neo-card overflow-hidden", isInHouse ? "bg-blue-50" : "bg-white")}>
               {/* Group Header */}
               <div 
-                className="p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => toggleGroup(name)}
+                className="p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleGroup(groupKey)}
               >
 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-chart-1 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
+                  <div className={cn("w-12 h-12 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]", isInHouse ? "bg-blue-500" : "bg-chart-1")}>
                     <Folder className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
+                    <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{skuName}</h3>
                     <div className="flex flex-wrap gap-2 mt-1">
                       <p className="text-sm font-bold text-muted-foreground uppercase">
                         {groupVersions.length} Versions • Latest: v.{latestVersion.version}
                       </p>
-                      {latestVersion.productionType === "In-House" && (
-                        <Badge variant="outline" className="ml-2 border-black font-bold bg-blue-100 text-blue-800">
-                          🏭 In-House
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className={cn("border-black font-bold", isInHouse ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800")}>
+                        {isInHouse ? "🏭 In-House" : "📦 Outsource"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -539,7 +546,7 @@ export default function Tracker() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => exportToCSV(name, groupVersions)}
+                          onClick={() => exportToCSV(skuName, groupVersions)}
                           className="h-7 text-xs font-bold uppercase border-black hover:bg-black hover:text-white"
                         >
                           <Download className="w-3 h-3 mr-1" /> Export CSV
