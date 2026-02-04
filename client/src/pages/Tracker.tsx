@@ -429,13 +429,17 @@ export default function Tracker() {
                   </div>
                   <div>
                     <h3 className="font-heading text-xl md:text-2xl font-bold uppercase leading-tight">{name}</h3>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <div className="flex flex-wrap gap-2 mt-1 items-center">
                       <p className="text-sm font-bold text-muted-foreground uppercase">
                         {groupVersions.length} Versions • Latest: v.{latestVersion.version}
                       </p>
-                      {latestVersion.productionType === "In-House" && (
-                        <Badge variant="outline" className="ml-2 border-black font-bold bg-blue-100 text-blue-800">
+                      {latestVersion.productionType === "In-House" ? (
+                        <Badge variant="outline" className="ml-2 border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
                           🏭 In-House
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="ml-2 border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
+                          📦 Outsource
                         </Badge>
                       )}
                     </div>
