@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, Edit, Trash2, Store, Download, Upload, TrendingUp, Tag, Search, GitCompare, FileJson, Loader2 } from "lucide-react";
+import { Plus, Trophy, Target, Zap, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, Folder, History, ArrowDown, ArrowUp, ArrowRight, Edit, Trash2, Store, Download, Upload, TrendingUp, Tag, Search, GitCompare, FileJson, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -16,8 +16,65 @@ import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
+import { format } from "date-fns";
+import { th } from "date-fns/locale";
 
+// Price History Section Component
+function PriceHistorySection({ projectId }: { projectId: string }) {
+  const { data: history, isLoading } = trpc.project.getPriceHistory.useQuery({ projectId });
 
+  if (isLoading) {
+    return (
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <History className="w-4 h-4" />
+          <span>กำลังโหลดประวัติ...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <History className="w-4 h-4" />
+          <span>ยังไม่มีประวัติการเปลี่ยนราคา</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-gray-200 pt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <History className="w-4 h-4 text-purple-600" />
+        <span className="font-bold text-sm uppercase text-purple-700">ประวัติการเปลี่ยนราคา</span>
+        <Badge variant="outline" className="text-xs">{history.length} รายการ</Badge>
+      </div>
+      <div className="max-h-[150px] overflow-y-auto space-y-2">
+        {history.map((item, index) => (
+          <div key={index} className="flex items-center justify-between text-xs bg-purple-50 p-2 rounded border border-purple-100">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px] bg-white">{item.channelName}</Badge>
+              <span className="text-muted-foreground">
+                {format(new Date(item.changedAt), "d MMM yyyy HH:mm", { locale: th })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-red-500 line-through">฿{item.oldPrice.toLocaleString()}</span>
+              <ArrowRight className="w-3 h-3 text-gray-400" />
+              <span className="text-green-600 font-bold">฿{item.newPrice.toLocaleString()}</span>
+              {item.oldFeePercent !== item.newFeePercent && (
+                <span className="text-muted-foreground">(ค่าธรรมเนียม: {item.oldFeePercent}% → {item.newFeePercent}%)</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Tracker() {
   const { projects, deleteProject, updateProject } = useProjects();
@@ -123,10 +180,16 @@ export default function Tracker() {
     setIsSimModalOpen(true);
   };
 
+  // Original channels for comparison when saving
+  const [originalChannels, setOriginalChannels] = useState<{ name: string; price: number; feePercent: number }[]>([]);
+
   const openPriceModal = (version: typeof projects[0]) => {
     setSelectedVersionForPrice(version);
     // Deep copy channels to temp state
-    setTempChannels(version.channels ? JSON.parse(JSON.stringify(version.channels)) : []);
+    const channels = version.channels ? JSON.parse(JSON.stringify(version.channels)) : [];
+    setTempChannels(channels);
+    // Store original channels for comparison
+    setOriginalChannels(version.channels ? version.channels.map(c => ({ name: c.name, price: c.price, feePercent: c.feePercent })) : []);
     setIsPriceModalOpen(true);
   };
 
@@ -152,18 +215,30 @@ export default function Tracker() {
     setTempChannels(newChannels);
   };
 
+  // Mutation for updating prices with history
+  const updatePricesMutation = trpc.project.updatePricesWithHistory.useMutation({
+    onSuccess: (data) => {
+      utils.project.list.invalidate();
+      if (data.historyCount > 0) {
+        toast.success(`บันทึกราคาสำเร็จ! (บันทึกประวัติ ${data.historyCount} รายการ)`);
+      } else {
+        toast.success("บันทึกราคาสำเร็จ!");
+      }
+      setIsPriceModalOpen(false);
+    },
+    onError: () => {
+      toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
+    }
+  });
+
   const savePrices = async () => {
     if (selectedVersionForPrice) {
-      try {
-        await updateProject(selectedVersionForPrice.id, {
-          ...selectedVersionForPrice,
-          channels: tempChannels
-        });
-        toast.success("Prices updated successfully!");
-        setIsPriceModalOpen(false);
-      } catch (error) {
-        toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
-      }
+      // Use the new API that records price history
+      updatePricesMutation.mutate({
+        projectId: selectedVersionForPrice.id,
+        oldChannels: originalChannels,
+        newChannels: tempChannels.map(c => ({ name: c.name, price: c.price, feePercent: c.feePercent })),
+      });
     }
   };
 
@@ -1055,7 +1130,7 @@ export default function Tracker() {
 
       {/* Manage Prices Modal */}
       <Dialog open={isPriceModalOpen} onOpenChange={setIsPriceModalOpen}>
-        <DialogContent className="max-w-md md:max-w-lg bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
+        <DialogContent className="max-w-md md:max-w-2xl bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl uppercase flex items-center gap-2">
               <Tag className="w-5 h-5" /> Manage Prices (v.{selectedVersionForPrice?.version})
@@ -1067,7 +1142,7 @@ export default function Tracker() {
               <span className="font-bold">Total Cost:</span> {selectedVersionForPrice?.totalCost.toLocaleString()} THB
             </div>
             
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
               {tempChannels.map((channel, index) => (
                 <div key={index} className="border border-black/20 p-3 rounded bg-gray-50 space-y-3">
                   <div className="font-bold text-sm uppercase text-purple-700">{channel.name}</div>
@@ -1103,11 +1178,26 @@ export default function Tracker() {
                 <div className="text-center text-muted-foreground py-4">No channels defined. Edit project to add channels.</div>
               )}
             </div>
+
+            {/* Price History Section */}
+            {selectedVersionForPrice && (
+              <PriceHistorySection projectId={selectedVersionForPrice.id} />
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPriceModalOpen(false)} className="border-black">Cancel</Button>
-            <Button onClick={savePrices} className="bg-black text-white hover:bg-gray-800">Save Prices</Button>
+            <Button 
+              onClick={savePrices} 
+              disabled={updatePricesMutation.isPending}
+              className="bg-black text-white hover:bg-gray-800"
+            >
+              {updatePricesMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+              ) : (
+                'Save Prices'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

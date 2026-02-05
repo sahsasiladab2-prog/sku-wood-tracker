@@ -33,3 +33,4 @@
 ## Bug Fixes
 - [x] Fix bug: Wood material details (code, usage, length) missing when editing project - only showing price
 - [x] Show single production type layout when SKU has only one type (no empty "ยังไม่มีข้อมูล" box)
+- [x] Add price history tracking - record all price changes with timestamps when using Manage Price

@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, Project } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, Project, priceHistory, InsertPriceHistory, PriceHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -194,4 +194,53 @@ export async function getAllProjects(): Promise<Project[]> {
     .orderBy(desc(projects.createdAt));
 
   return result;
+}
+
+// ============ Price History Functions ============
+
+export async function createPriceHistory(history: InsertPriceHistory): Promise<PriceHistory> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("[Database] Cannot create price history: database not available");
+  }
+
+  const result = await db.insert(priceHistory).values(history);
+  
+  // Get the inserted record
+  const inserted = await db
+    .select()
+    .from(priceHistory)
+    .where(eq(priceHistory.id, Number(result[0].insertId)))
+    .limit(1);
+
+  return inserted[0];
+}
+
+export async function getPriceHistoryByProjectId(projectId: string): Promise<PriceHistory[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get price history: database not available");
+    return [];
+  }
+
+  const result = await db
+    .select()
+    .from(priceHistory)
+    .where(eq(priceHistory.projectId, projectId))
+    .orderBy(desc(priceHistory.changedAt));
+
+  return result;
+}
+
+export async function bulkCreatePriceHistory(historyList: InsertPriceHistory[]): Promise<number> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("[Database] Cannot bulk create price history: database not available");
+  }
+
+  if (historyList.length === 0) return 0;
+
+  await db.insert(priceHistory).values(historyList);
+  
+  return historyList.length;
 }

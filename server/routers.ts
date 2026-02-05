@@ -10,7 +10,9 @@ import {
   updateProject, 
   deleteProject,
   bulkCreateProjects,
-  getAllProjects 
+  getAllProjects,
+  bulkCreatePriceHistory,
+  getPriceHistoryByProjectId
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { nanoid } from "nanoid";
@@ -363,6 +365,80 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
 
         const count = await bulkCreateProjects(projectsToInsert);
         return { success: true, count, imported: projectsToInsert.length };
+      }),
+
+    // Update prices and record history
+    updatePricesWithHistory: protectedProcedure
+      .input(z.object({
+        projectId: z.string(),
+        oldChannels: z.array(channelSchema),
+        newChannels: z.array(channelSchema),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Find changed channels and record history
+        const historyRecords: Array<{
+          projectId: string;
+          userId: number;
+          channelName: string;
+          oldPrice: string;
+          newPrice: string;
+          oldFeePercent: string;
+          newFeePercent: string;
+        }> = [];
+
+        for (const newChannel of input.newChannels) {
+          const oldChannel = input.oldChannels.find(c => c.name === newChannel.name);
+          
+          // Record if price or fee changed
+          if (oldChannel && (oldChannel.price !== newChannel.price || oldChannel.feePercent !== newChannel.feePercent)) {
+            historyRecords.push({
+              projectId: input.projectId,
+              userId: ctx.user.id,
+              channelName: newChannel.name,
+              oldPrice: String(oldChannel.price),
+              newPrice: String(newChannel.price),
+              oldFeePercent: String(oldChannel.feePercent),
+              newFeePercent: String(newChannel.feePercent),
+            });
+          }
+        }
+
+        // Save history records
+        if (historyRecords.length > 0) {
+          await bulkCreatePriceHistory(historyRecords);
+        }
+
+        // Update project with new channels
+        const project = await updateProject(input.projectId, ctx.user.id, {
+          channels: input.newChannels,
+        });
+
+        return {
+          success: true,
+          historyCount: historyRecords.length,
+          project: project ? {
+            ...project,
+            carpenterCost: Number(project.carpenterCost) || 0,
+            paintingCost: Number(project.paintingCost) || 0,
+            packingCost: Number(project.packingCost) || 0,
+            wasteCost: Number(project.wasteCost) || 0,
+            totalCost: Number(project.totalCost) || 0,
+          } : null,
+        };
+      }),
+
+    // Get price history for a project
+    getPriceHistory: protectedProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ input }) => {
+        const history = await getPriceHistoryByProjectId(input.projectId);
+        return history.map(h => ({
+          ...h,
+          oldPrice: Number(h.oldPrice) || 0,
+          newPrice: Number(h.newPrice) || 0,
+          oldFeePercent: Number(h.oldFeePercent) || 0,
+          newFeePercent: Number(h.newFeePercent) || 0,
+        }));
       }),
   }),
 });

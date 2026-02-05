@@ -73,3 +73,22 @@ export const projects = mysqlTable("projects", {
 
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = typeof projects.$inferInsert;
+
+/**
+ * Price History table for tracking all price changes
+ * Records every change made via Manage Prices
+ */
+export const priceHistory = mysqlTable("price_history", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: varchar("projectId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  channelName: varchar("channelName", { length: 255 }).notNull(),
+  oldPrice: decimal("oldPrice", { precision: 10, scale: 2 }),
+  newPrice: decimal("newPrice", { precision: 10, scale: 2 }).notNull(),
+  oldFeePercent: decimal("oldFeePercent", { precision: 5, scale: 2 }),
+  newFeePercent: decimal("newFeePercent", { precision: 5, scale: 2 }).notNull(),
+  changedAt: timestamp("changedAt").defaultNow().notNull(),
+});
+
+export type PriceHistory = typeof priceHistory.$inferSelect;
+export type InsertPriceHistory = typeof priceHistory.$inferInsert;
