@@ -76,6 +76,115 @@ function PriceHistorySection({ projectId }: { projectId: string }) {
   );
 }
 
+// Price Comparison Chart Component - shows price trends over time for each channel
+function PriceComparisonChart({ projectId }: { projectId: string }) {
+  const { data: history, isLoading } = trpc.project.getPriceHistory.useQuery({ projectId });
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <TrendingUp className="w-4 h-4" />
+          <span>กำลังโหลดกราฟ...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <TrendingUp className="w-4 h-4" />
+          <span>ยังไม่มีข้อมูลการเปลี่ยนราคาสำหรับแสดงกราฟ</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Group history by channel and prepare chart data
+  const channelData: { [key: string]: { date: string; price: number; dateObj: Date }[] } = {};
+  
+  history.forEach(item => {
+    if (!channelData[item.channelName]) {
+      channelData[item.channelName] = [];
+    }
+    channelData[item.channelName].push({
+      date: format(new Date(item.changedAt), "d MMM", { locale: th }),
+      price: item.newPrice,
+      dateObj: new Date(item.changedAt)
+    });
+  });
+
+  // Sort each channel's data by date
+  Object.keys(channelData).forEach(channel => {
+    channelData[channel].sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+  });
+
+  // Create unified timeline for chart
+  const allDates = new Set<string>();
+  Object.values(channelData).forEach(data => {
+    data.forEach(item => allDates.add(item.date));
+  });
+
+  const chartData = Array.from(allDates).map(date => {
+    const dataPoint: { date: string; [key: string]: number | string } = { date };
+    Object.keys(channelData).forEach(channel => {
+      const channelItem = channelData[channel].find(d => d.date === date);
+      if (channelItem) {
+        dataPoint[channel] = channelItem.price;
+      }
+    });
+    return dataPoint;
+  });
+
+  // Colors for different channels
+  const colors = ['#3B82F6', '#F97316', '#10B981', '#8B5CF6', '#EC4899'];
+  const channels = Object.keys(channelData);
+
+  return (
+    <div className="border-t border-gray-200 pt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="w-4 h-4 text-blue-600" />
+        <span className="font-bold text-sm uppercase text-blue-700">แนวโน้มราคาขายตาม Channel</span>
+      </div>
+      <div className="h-[180px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis 
+              dataKey="date" 
+              tick={{ fontSize: 10 }} 
+              stroke="#9ca3af"
+            />
+            <YAxis 
+              tick={{ fontSize: 10 }} 
+              stroke="#9ca3af"
+              tickFormatter={(value) => `฿${value}`}
+            />
+            <RechartsTooltip 
+              formatter={(value: number) => [`฿${value.toLocaleString()}`, '']}
+              labelStyle={{ fontWeight: 'bold' }}
+            />
+            <Legend />
+            {channels.map((channel, index) => (
+              <Line
+                key={channel}
+                type="monotone"
+                dataKey={channel}
+                stroke={colors[index % colors.length]}
+                strokeWidth={2}
+                dot={{ fill: colors[index % colors.length], r: 4 }}
+                connectNulls
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export default function Tracker() {
   const { projects, deleteProject, updateProject } = useProjects();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -605,10 +714,16 @@ export default function Tracker() {
                         </Badge>
                         <span className="text-xs font-bold text-muted-foreground">v.{inHouseMetrics.version}</span>
                       </div>
+                      {inHouseMetrics.margin < 23 && (
+                        <div className="flex items-center gap-1 mb-2 text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">
+                          <AlertCircle className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">⚠️ Net Margin ต่ำกว่า 23%</span>
+                        </div>
+                      )}
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
-                          <p className={cn("font-heading text-lg font-bold", inHouseMetrics.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
+                          <p className={cn("font-heading text-lg font-bold", inHouseMetrics.margin >= 23 ? "text-green-600" : "text-red-600")}>
                             {inHouseMetrics.margin.toFixed(1)}%
                           </p>
                         </div>
@@ -635,10 +750,16 @@ export default function Tracker() {
                         </Badge>
                         <span className="text-xs font-bold text-muted-foreground">v.{outsourceMetrics.version}</span>
                       </div>
+                      {outsourceMetrics.margin < 23 && (
+                        <div className="flex items-center gap-1 mb-2 text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">
+                          <AlertCircle className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">⚠️ Net Margin ต่ำกว่า 23%</span>
+                        </div>
+                      )}
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
-                          <p className={cn("font-heading text-lg font-bold", outsourceMetrics.margin >= 30 ? "text-green-600" : "text-yellow-600")}>
+                          <p className={cn("font-heading text-lg font-bold", outsourceMetrics.margin >= 23 ? "text-green-600" : "text-red-600")}>
                             {outsourceMetrics.margin.toFixed(1)}%
                           </p>
                         </div>
@@ -674,12 +795,20 @@ export default function Tracker() {
                       v.{(inHouseMetrics || outsourceMetrics)?.version}
                     </span>
                     
+                    {/* Low Margin Alert */}
+                    {((inHouseMetrics || outsourceMetrics)?.margin || 0) < 23 && (
+                      <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">
+                        <AlertCircle className="w-3 h-3" />
+                        <span className="text-[10px] font-bold">⚠️ Net Margin ต่ำกว่า 23%</span>
+                      </div>
+                    )}
+                    
                     {/* Metrics in a row */}
                     <div className="flex items-center gap-6 ml-auto">
                       <div className="text-right">
                         <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
                         <p className={cn("font-heading text-xl font-bold", 
-                          ((inHouseMetrics || outsourceMetrics)?.margin || 0) >= 30 ? "text-green-600" : "text-yellow-600"
+                          ((inHouseMetrics || outsourceMetrics)?.margin || 0) >= 23 ? "text-green-600" : "text-red-600"
                         )}>
                           {(inHouseMetrics || outsourceMetrics)?.margin.toFixed(1)}%
                         </p>
@@ -1182,6 +1311,11 @@ export default function Tracker() {
             {/* Price History Section */}
             {selectedVersionForPrice && (
               <PriceHistorySection projectId={selectedVersionForPrice.id} />
+            )}
+
+            {/* Price Comparison Chart */}
+            {selectedVersionForPrice && (
+              <PriceComparisonChart projectId={selectedVersionForPrice.id} />
             )}
           </div>
 
