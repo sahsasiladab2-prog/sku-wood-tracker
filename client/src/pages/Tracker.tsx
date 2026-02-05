@@ -518,22 +518,18 @@ export default function Tracker() {
                   </Button>
                 </div>
                 
-                {/* Production Type Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* In-House Section */}
-                  <div className={cn(
-                    "border-2 p-3 rounded-lg",
-                    inHouseMetrics ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-gray-50"
-                  )}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
-                        🏭 In-House
-                      </Badge>
-                      {inHouseMetrics && (
+                {/* Production Type Metrics - Show comparison only if both types exist */}
+                {inHouseMetrics && outsourceMetrics ? (
+                  // Both types exist - show side by side comparison
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* In-House Section */}
+                    <div className="border-2 p-3 rounded-lg border-blue-300 bg-blue-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
+                          🏭 In-House
+                        </Badge>
                         <span className="text-xs font-bold text-muted-foreground">v.{inHouseMetrics.version}</span>
-                      )}
-                    </div>
-                    {inHouseMetrics ? (
+                      </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
@@ -554,25 +550,16 @@ export default function Tracker() {
                           </p>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-2">ยังไม่มีข้อมูล</p>
-                    )}
-                  </div>
-                  
-                  {/* Outsource Section */}
-                  <div className={cn(
-                    "border-2 p-3 rounded-lg",
-                    outsourceMetrics ? "border-orange-300 bg-orange-50" : "border-gray-200 bg-gray-50"
-                  )}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
-                        📦 Outsource
-                      </Badge>
-                      {outsourceMetrics && (
-                        <span className="text-xs font-bold text-muted-foreground">v.{outsourceMetrics.version}</span>
-                      )}
                     </div>
-                    {outsourceMetrics ? (
+                    
+                    {/* Outsource Section */}
+                    <div className="border-2 p-3 rounded-lg border-orange-300 bg-orange-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
+                          📦 Outsource
+                        </Badge>
+                        <span className="text-xs font-bold text-muted-foreground">v.{outsourceMetrics.version}</span>
+                      </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase">Net Margin</p>
@@ -593,11 +580,52 @@ export default function Tracker() {
                           </p>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-2">ยังไม่มีข้อมูล</p>
-                    )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // Only one type exists - show single row like before
+                  <div className="flex items-center gap-6">
+                    {/* Badge */}
+                    {inHouseMetrics ? (
+                      <Badge variant="outline" className="border-blue-600 font-bold bg-blue-100 text-blue-700 shadow-[2px_2px_0px_0px_#1d4ed8]">
+                        🏭 In-House
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-orange-600 font-bold bg-orange-100 text-orange-700 shadow-[2px_2px_0px_0px_#c2410c]">
+                        📦 Outsource
+                      </Badge>
+                    )}
+                    <span className="text-xs font-bold text-muted-foreground">
+                      v.{(inHouseMetrics || outsourceMetrics)?.version}
+                    </span>
+                    
+                    {/* Metrics in a row */}
+                    <div className="flex items-center gap-6 ml-auto">
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Net Margin</p>
+                        <p className={cn("font-heading text-xl font-bold", 
+                          ((inHouseMetrics || outsourceMetrics)?.margin || 0) >= 30 ? "text-green-600" : "text-yellow-600"
+                        )}>
+                          {(inHouseMetrics || outsourceMetrics)?.margin.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="w-px h-8 bg-gray-300"></div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Net Profit</p>
+                        <p className="font-heading text-xl font-bold text-blue-600">
+                          {(inHouseMetrics || outsourceMetrics)?.profit.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="w-px h-8 bg-gray-300"></div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Cost</p>
+                        <p className="font-heading text-xl font-bold">
+                          {(inHouseMetrics || outsourceMetrics)?.cost.toLocaleString()} THB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Versions List (Collapsible) */}
