@@ -11,6 +11,7 @@ import {
   deleteProject,
   bulkCreateProjects,
   getAllProjects,
+  getAllProjectsShared,
   bulkCreatePriceHistory,
   getPriceHistoryByProjectId
 } from "./db";
@@ -85,9 +86,9 @@ export const appRouter = router({
 
   // Project routes
   project: router({
-    // List all projects for the current user
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const projects = await getProjectsByUserId(ctx.user.id);
+    // List all projects (shared workspace - everyone sees the same data)
+    list: publicProcedure.query(async () => {
+      const projects = await getAllProjectsShared();
       // Convert decimal strings back to numbers for frontend
       return projects.map(p => ({
         ...p,
@@ -99,11 +100,11 @@ export const appRouter = router({
       }));
     }),
 
-    // Get a single project by ID
-    get: protectedProcedure
+    // Get a single project by ID (shared - anyone can view)
+    get: publicProcedure
       .input(z.object({ id: z.string() }))
-      .query(async ({ ctx, input }) => {
-        const project = await getProjectById(input.id, ctx.user.id);
+      .query(async ({ input }) => {
+        const project = await getProjectById(input.id);
         if (!project) return null;
         return {
           ...project,
@@ -115,13 +116,13 @@ export const appRouter = router({
         };
       }),
 
-    // Create a new project
-    create: protectedProcedure
+    // Create a new project (shared - anyone can create)
+    create: publicProcedure
       .input(projectInputSchema)
       .mutation(async ({ ctx, input }) => {
         const project = await createProject({
           id: nanoid(8).toUpperCase(),
-          userId: ctx.user.id,
+          userId: ctx.user?.id || 0,
           name: input.name,
           version: input.version,
           productionType: input.productionType,
@@ -144,8 +145,8 @@ export const appRouter = router({
         };
       }),
 
-    // Update an existing project
-    update: protectedProcedure
+    // Update an existing project (shared - anyone can edit)
+    update: publicProcedure
       .input(z.object({ id: z.string(), data: projectUpdateSchema }))
       .mutation(async ({ ctx, input }) => {
         const updateData: Record<string, any> = {};
@@ -162,7 +163,7 @@ export const appRouter = router({
         if (input.data.channels !== undefined) updateData.channels = input.data.channels;
         if (input.data.totalCost !== undefined) updateData.totalCost = String(input.data.totalCost);
 
-        const project = await updateProject(input.id, ctx.user.id, updateData);
+        const project = await updateProject(input.id, ctx.user?.id || 0, updateData);
         if (!project) return null;
         return {
           ...project,
@@ -174,21 +175,21 @@ export const appRouter = router({
         };
       }),
 
-    // Delete a project
-    delete: protectedProcedure
+    // Delete a project (shared - anyone can delete)
+    delete: publicProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        await deleteProject(input.id, ctx.user.id);
+      .mutation(async ({ input }) => {
+        await deleteProject(input.id);
         return { success: true };
       }),
 
     // Bulk import projects (for migrating from localStorage)
-    bulkImport: protectedProcedure
+    bulkImport: publicProcedure
       .input(z.object({ projects: z.array(projectImportSchema) }))
       .mutation(async ({ ctx, input }) => {
         const projectsToInsert = input.projects.map(p => ({
           id: p.id,
-          userId: ctx.user.id,
+          userId: ctx.user?.id || 0,
           name: p.name,
           version: p.version,
           productionType: p.productionType,
@@ -207,10 +208,10 @@ export const appRouter = router({
       }),
 
     // Send backup email to owner with JSON download link
-    sendBackupEmail: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        // Get all projects for the current user
-        const projects = await getProjectsByUserId(ctx.user.id);
+    sendBackupEmail: publicProcedure
+      .mutation(async () => {
+        // Get all projects (shared workspace)
+        const projects = await getAllProjectsShared();
         
         // Convert to export format (full data)
         const exportData = projects.map(p => ({
@@ -302,7 +303,7 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
       }),
 
     // Import projects from JSON file (exported data)
-    importFromJson: protectedProcedure
+    importFromJson: publicProcedure
       .input(z.object({ 
         projects: z.array(z.any()),
         mode: z.enum(["merge", "replace"]).default("merge")
@@ -348,7 +349,7 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
           
           return {
             id: newId,
-            userId: ctx.user.id,
+            userId: ctx.user?.id || 0,
             name: p.name || "Imported Project",
             version: p.version || 1,
             productionType: p.productionType || "Outsource",
@@ -367,8 +368,8 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
         return { success: true, count, imported: projectsToInsert.length };
       }),
 
-    // Update prices and record history
-    updatePricesWithHistory: protectedProcedure
+    // Update prices and record history (shared - anyone can update prices)
+    updatePricesWithHistory: publicProcedure
       .input(z.object({
         projectId: z.string(),
         oldChannels: z.array(channelSchema),
@@ -393,7 +394,7 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
           if (oldChannel && (oldChannel.price !== newChannel.price || oldChannel.feePercent !== newChannel.feePercent)) {
             historyRecords.push({
               projectId: input.projectId,
-              userId: ctx.user.id,
+              userId: ctx.user?.id || 0,
               channelName: newChannel.name,
               oldPrice: String(oldChannel.price),
               newPrice: String(newChannel.price),
@@ -409,7 +410,7 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
         }
 
         // Update project with new channels
-        const project = await updateProject(input.projectId, ctx.user.id, {
+        const project = await updateProject(input.projectId, ctx.user?.id || 0, {
           channels: input.newChannels,
         });
 
@@ -427,8 +428,8 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
         };
       }),
 
-    // Get price history for a project
-    getPriceHistory: protectedProcedure
+    // Get price history for a project (shared - anyone can view)
+    getPriceHistory: publicProcedure
       .input(z.object({ projectId: z.string() }))
       .query(async ({ input }) => {
         const history = await getPriceHistoryByProjectId(input.projectId);

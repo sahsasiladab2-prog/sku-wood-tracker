@@ -107,7 +107,23 @@ export async function getProjectsByUserId(userId: number): Promise<Project[]> {
   return result;
 }
 
-export async function getProjectById(id: string, userId: number): Promise<Project | undefined> {
+// Get all projects globally (shared workspace)
+export async function getAllProjectsShared(): Promise<Project[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get projects: database not available");
+    return [];
+  }
+
+  const result = await db
+    .select()
+    .from(projects)
+    .orderBy(desc(projects.createdAt));
+
+  return result;
+}
+
+export async function getProjectById(id: string, userId?: number): Promise<Project | undefined> {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get project: database not available");
@@ -117,7 +133,7 @@ export async function getProjectById(id: string, userId: number): Promise<Projec
   const result = await db
     .select()
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.userId, userId)))
+    .where(eq(projects.id, id))
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
@@ -149,20 +165,20 @@ export async function updateProject(id: string, userId: number, data: Partial<In
   await db
     .update(projects)
     .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+    .where(eq(projects.id, id));
 
-  return getProjectById(id, userId);
+  return getProjectById(id);
 }
 
-export async function deleteProject(id: string, userId: number): Promise<boolean> {
+export async function deleteProject(id: string, userId?: number): Promise<boolean> {
   const db = await getDb();
   if (!db) {
     throw new Error("[Database] Cannot delete project: database not available");
   }
 
-  const result = await db
+  await db
     .delete(projects)
-    .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+    .where(eq(projects.id, id));
 
   return true;
 }

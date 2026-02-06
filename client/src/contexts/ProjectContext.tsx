@@ -119,10 +119,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [hasPendingMigration, setHasPendingMigration] = useState(false);
   
-  // tRPC queries and mutations
-  const { data: dbProjects, isLoading, refetch } = trpc.project.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  // tRPC queries and mutations - always enabled (shared workspace, no auth required)
+  const { data: dbProjects, isLoading, refetch } = trpc.project.list.useQuery(undefined);
   
   const createMutation = trpc.project.create.useMutation({
     onSuccess: () => refetch(),
@@ -157,7 +155,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   // Check for pending migration on mount
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    if (!authLoading) {
       const localData = localStorage.getItem("sku-projects");
       if (localData) {
         try {
@@ -170,36 +168,21 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [isAuthenticated, authLoading]);
+  }, [authLoading]);
 
   const addProject = useCallback(async (projectData: Omit<Project, "id" | "updatedAt">) => {
-    if (!isAuthenticated) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
-      return;
-    }
-    
     const dbData = frontendToDb(projectData);
     await createMutation.mutateAsync(dbData);
-  }, [isAuthenticated, createMutation]);
+  }, [createMutation]);
 
   const updateProject = useCallback(async (id: string, updates: Partial<Project>) => {
-    if (!isAuthenticated) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
-      return;
-    }
-    
     const dbData = frontendToDb(updates);
     await updateMutation.mutateAsync({ id, data: dbData });
-  }, [isAuthenticated, updateMutation]);
+  }, [updateMutation]);
 
   const deleteProject = useCallback(async (id: string) => {
-    if (!isAuthenticated) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
-      return;
-    }
-    
     await deleteMutation.mutateAsync({ id });
-  }, [isAuthenticated, deleteMutation]);
+  }, [deleteMutation]);
 
   const getProjectVersion = useCallback((name: string) => {
     const existingProjects = projects.filter(
@@ -213,11 +196,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [projects]);
 
   const migrateFromLocalStorage = useCallback(async () => {
-    if (!isAuthenticated) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
-      return;
-    }
-
     const localData = localStorage.getItem("sku-projects");
     if (!localData) {
       toast.info("ไม่พบข้อมูลในเครื่องที่ต้องย้าย");
@@ -277,7 +255,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       updateProject, 
       deleteProject, 
       getProjectVersion,
-      isLoading: isLoading || authLoading,
+      isLoading: isLoading,
       migrateFromLocalStorage,
       hasPendingMigration,
     }}>

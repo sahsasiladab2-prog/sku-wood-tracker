@@ -36,3 +36,5 @@
 - [x] Add price history tracking - record all price changes with timestamps when using Manage Price
 - [x] Add Price Alert - warning when Net Margin < 23%
 - [x] Add Price Comparison Chart - show price trends over time for each channel
+- [x] Migrate project data from localStorage to database so all users see the same data
+- [x] Make all project data shared globally - everyone sees and edits the same data (no userId filtering)
