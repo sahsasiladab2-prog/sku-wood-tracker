@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, LayoutDashboard, Trophy, Upload, LogIn, LogOut, User } from "lucide-react";
+import { Calculator, LayoutDashboard, Trophy, Upload, LogIn, LogOut, User, Factory, ClipboardList, Warehouse, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -16,9 +16,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { hasPendingMigration, migrateFromLocalStorage, isLoading: projectsLoading } = useProjects();
 
   const navItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/calculator", label: "Calculator", icon: Calculator },
-    { path: "/tracker", label: "Tracker", icon: Trophy },
+    { path: "/", label: "โรงงาน", icon: Factory },
+    { path: "/production", label: "การผลิต", icon: ClipboardList },
+    { path: "/inventory", label: "สต็อก", icon: Warehouse },
+    { path: "/workers", label: "พนักงาน", icon: Users },
+    { path: "/calculator", label: "คำนวณ", icon: Calculator },
+    { path: "/tracker", label: "SKU", icon: Trophy },
+    { path: "/dashboard", label: "วิเคราะห์", icon: BarChart3 },
   ];
 
   return (
@@ -27,8 +31,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <aside className="hidden md:flex w-64 bg-sidebar border-r-2 border-black p-4 flex-col gap-6 fixed h-full z-10">
         <div className="p-4 border-2 border-black bg-primary text-primary-foreground shadow-[4px_4px_0px_0px_#000000]">
           <h1 className="text-2xl font-heading font-bold uppercase tracking-tighter leading-none">
-            SKU WOOD<br />TRACKER
+            FURNITURE<br />FACTORY
           </h1>
+          <p className="text-[10px] text-primary-foreground/70 uppercase mt-1 tracking-wider">Management System</p>
         </div>
 
         <nav className="flex flex-col gap-2 flex-1">
@@ -116,7 +121,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Mobile Header */}
       <header className="md:hidden bg-primary border-b-2 border-black p-4 sticky top-0 z-20 flex justify-between items-center shadow-md">
         <h1 className="text-xl font-heading font-bold uppercase text-white tracking-tighter">
-          SKU WOOD TRACKER
+          FURNITURE FACTORY
         </h1>
         {authLoading ? (
           <div className="w-8 h-8 bg-gray-300 border-2 border-black rounded-full animate-pulse" />
@@ -159,18 +164,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - show 5 key items */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black p-2 flex justify-around items-center z-30 shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] pb-safe">
-        {navItems.map((item) => {
+        {navItems.filter(item => ["/", "/production", "/inventory", "/calculator", "/tracker"].includes(item.path)).map((item) => {
           const isActive = location === item.path;
           return (
             <Link key={item.path} href={item.path}>
               <div className={cn(
-                "flex flex-col items-center justify-center p-2 rounded-lg transition-all w-20",
+                "flex flex-col items-center justify-center p-1.5 rounded-lg transition-all w-16",
                 isActive ? "bg-accent text-accent-foreground border-2 border-black shadow-[2px_2px_0px_0px_#000000] translate-y-[-4px]" : "text-muted-foreground"
               )}>
-                <item.icon className={cn("w-6 h-6", isActive && "stroke-[3px]")} />
-                <span className="text-[10px] font-bold uppercase mt-1">{item.label}</span>
+                <item.icon className={cn("w-5 h-5", isActive && "stroke-[3px]")} />
+                <span className="text-[9px] font-bold uppercase mt-0.5">{item.label}</span>
               </div>
             </Link>
           );

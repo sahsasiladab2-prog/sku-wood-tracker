@@ -1,6 +1,12 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, Project, priceHistory, InsertPriceHistory, PriceHistory } from "../drizzle/schema";
+import {
+  InsertUser, users, projects, InsertProject, Project, priceHistory, InsertPriceHistory, PriceHistory,
+  productionOrders, InsertProductionOrder, ProductionOrder,
+  inventory, InsertInventory, Inventory,
+  inventoryTransactions, InsertInventoryTransaction, InventoryTransaction,
+  workers, InsertWorker, Worker,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -257,6 +263,131 @@ export async function bulkCreatePriceHistory(historyList: InsertPriceHistory[]):
   if (historyList.length === 0) return 0;
 
   await db.insert(priceHistory).values(historyList);
-  
+
   return historyList.length;
+}
+
+// ============ Production Order Functions ============
+
+export async function getAllProductionOrders(): Promise<ProductionOrder[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(productionOrders).orderBy(desc(productionOrders.createdAt));
+}
+
+export async function getProductionOrderById(id: number): Promise<ProductionOrder | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(productionOrders).where(eq(productionOrders.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createProductionOrder(order: InsertProductionOrder): Promise<ProductionOrder> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot create production order: database not available");
+  const result = await db.insert(productionOrders).values(order);
+  const inserted = await db.select().from(productionOrders).where(eq(productionOrders.id, Number(result[0].insertId))).limit(1);
+  return inserted[0];
+}
+
+export async function updateProductionOrder(id: number, data: Partial<InsertProductionOrder>): Promise<ProductionOrder | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot update production order: database not available");
+  await db.update(productionOrders).set({ ...data, updatedAt: new Date() }).where(eq(productionOrders.id, id));
+  return getProductionOrderById(id);
+}
+
+export async function deleteProductionOrder(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot delete production order: database not available");
+  await db.delete(productionOrders).where(eq(productionOrders.id, id));
+  return true;
+}
+
+// ============ Inventory Functions ============
+
+export async function getAllInventory(): Promise<Inventory[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(inventory).orderBy(desc(inventory.updatedAt));
+}
+
+export async function getInventoryById(id: number): Promise<Inventory | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(inventory).where(eq(inventory.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createInventoryItem(item: InsertInventory): Promise<Inventory> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot create inventory item: database not available");
+  const result = await db.insert(inventory).values(item);
+  const inserted = await db.select().from(inventory).where(eq(inventory.id, Number(result[0].insertId))).limit(1);
+  return inserted[0];
+}
+
+export async function updateInventoryItem(id: number, data: Partial<InsertInventory>): Promise<Inventory | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot update inventory item: database not available");
+  await db.update(inventory).set({ ...data, updatedAt: new Date() }).where(eq(inventory.id, id));
+  return getInventoryById(id);
+}
+
+export async function deleteInventoryItem(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot delete inventory item: database not available");
+  await db.delete(inventory).where(eq(inventory.id, id));
+  return true;
+}
+
+export async function createInventoryTransaction(tx: InsertInventoryTransaction): Promise<InventoryTransaction> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot create inventory transaction: database not available");
+  const result = await db.insert(inventoryTransactions).values(tx);
+  const inserted = await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.id, Number(result[0].insertId))).limit(1);
+  return inserted[0];
+}
+
+export async function getInventoryTransactions(inventoryId: number): Promise<InventoryTransaction[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(inventoryTransactions).where(eq(inventoryTransactions.inventoryId, inventoryId)).orderBy(desc(inventoryTransactions.createdAt));
+}
+
+// ============ Worker Functions ============
+
+export async function getAllWorkers(): Promise<Worker[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(workers).orderBy(desc(workers.createdAt));
+}
+
+export async function getWorkerById(id: number): Promise<Worker | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(workers).where(eq(workers.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createWorker(worker: InsertWorker): Promise<Worker> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot create worker: database not available");
+  const result = await db.insert(workers).values(worker);
+  const inserted = await db.select().from(workers).where(eq(workers.id, Number(result[0].insertId))).limit(1);
+  return inserted[0];
+}
+
+export async function updateWorker(id: number, data: Partial<InsertWorker>): Promise<Worker | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot update worker: database not available");
+  await db.update(workers).set({ ...data, updatedAt: new Date() }).where(eq(workers.id, id));
+  return getWorkerById(id);
+}
+
+export async function deleteWorker(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("[Database] Cannot delete worker: database not available");
+  await db.delete(workers).where(eq(workers.id, id));
+  return true;
 }

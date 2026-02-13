@@ -3,17 +3,34 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { 
-  getProjectsByUserId, 
-  getProjectById, 
-  createProject, 
-  updateProject, 
+import {
+  getProjectsByUserId,
+  getProjectById,
+  createProject,
+  updateProject,
   deleteProject,
   bulkCreateProjects,
   getAllProjects,
   getAllProjectsShared,
   bulkCreatePriceHistory,
-  getPriceHistoryByProjectId
+  getPriceHistoryByProjectId,
+  getAllProductionOrders,
+  getProductionOrderById,
+  createProductionOrder,
+  updateProductionOrder,
+  deleteProductionOrder,
+  getAllInventory,
+  getInventoryById,
+  createInventoryItem,
+  updateInventoryItem,
+  deleteInventoryItem,
+  createInventoryTransaction,
+  getInventoryTransactions,
+  getAllWorkers,
+  getWorkerById,
+  createWorker,
+  updateWorker,
+  deleteWorker,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { nanoid } from "nanoid";
@@ -440,6 +457,280 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
           oldFeePercent: Number(h.oldFeePercent) || 0,
           newFeePercent: Number(h.newFeePercent) || 0,
         }));
+      }),
+  }),
+
+  // Production Order routes
+  production: router({
+    list: publicProcedure.query(async () => {
+      const orders = await getAllProductionOrders();
+      return orders.map(o => ({
+        ...o,
+        assignedWorkers: o.assignedWorkers || [],
+      }));
+    }),
+
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const order = await getProductionOrderById(input.id);
+        if (!order) return null;
+        return { ...order, assignedWorkers: order.assignedWorkers || [] };
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        projectId: z.string(),
+        orderNumber: z.string(),
+        quantity: z.number().min(1),
+        status: z.enum(["pending", "in_progress", "completed", "cancelled"]).default("pending"),
+        priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+        deadline: z.string().nullable().optional(),
+        assignedWorkers: z.array(z.number()).optional(),
+        notes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const order = await createProductionOrder({
+          projectId: input.projectId,
+          orderNumber: input.orderNumber,
+          quantity: input.quantity,
+          status: input.status,
+          priority: input.priority,
+          deadline: input.deadline ? new Date(input.deadline) : null,
+          assignedWorkers: input.assignedWorkers || [],
+          notes: input.notes || null,
+        });
+        return order;
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        data: z.object({
+          projectId: z.string().optional(),
+          orderNumber: z.string().optional(),
+          quantity: z.number().min(1).optional(),
+          completedQty: z.number().min(0).optional(),
+          status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+          priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+          deadline: z.string().nullable().optional(),
+          assignedWorkers: z.array(z.number()).optional(),
+          notes: z.string().nullable().optional(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        const data: any = { ...input.data };
+        if (data.deadline !== undefined) {
+          data.deadline = data.deadline ? new Date(data.deadline) : null;
+        }
+        return updateProductionOrder(input.id, data);
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteProductionOrder(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Inventory routes
+  inventory: router({
+    list: publicProcedure.query(async () => {
+      const items = await getAllInventory();
+      return items.map(i => ({
+        ...i,
+        currentStock: Number(i.currentStock) || 0,
+        minStock: Number(i.minStock) || 0,
+        costPerUnit: Number(i.costPerUnit) || 0,
+      }));
+    }),
+
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const item = await getInventoryById(input.id);
+        if (!item) return null;
+        return {
+          ...item,
+          currentStock: Number(item.currentStock) || 0,
+          minStock: Number(item.minStock) || 0,
+          costPerUnit: Number(item.costPerUnit) || 0,
+        };
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        materialCode: z.string(),
+        materialName: z.string(),
+        currentStock: z.number().default(0),
+        unit: z.string().default("ซม."),
+        minStock: z.number().default(0),
+        costPerUnit: z.number().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const item = await createInventoryItem({
+          materialCode: input.materialCode,
+          materialName: input.materialName,
+          currentStock: String(input.currentStock),
+          unit: input.unit,
+          minStock: String(input.minStock),
+          costPerUnit: String(input.costPerUnit),
+        });
+        return {
+          ...item,
+          currentStock: Number(item.currentStock) || 0,
+          minStock: Number(item.minStock) || 0,
+          costPerUnit: Number(item.costPerUnit) || 0,
+        };
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        data: z.object({
+          materialCode: z.string().optional(),
+          materialName: z.string().optional(),
+          currentStock: z.number().optional(),
+          unit: z.string().optional(),
+          minStock: z.number().optional(),
+          costPerUnit: z.number().optional(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        const data: any = {};
+        if (input.data.materialCode !== undefined) data.materialCode = input.data.materialCode;
+        if (input.data.materialName !== undefined) data.materialName = input.data.materialName;
+        if (input.data.currentStock !== undefined) data.currentStock = String(input.data.currentStock);
+        if (input.data.unit !== undefined) data.unit = input.data.unit;
+        if (input.data.minStock !== undefined) data.minStock = String(input.data.minStock);
+        if (input.data.costPerUnit !== undefined) data.costPerUnit = String(input.data.costPerUnit);
+        const item = await updateInventoryItem(input.id, data);
+        if (!item) return null;
+        return {
+          ...item,
+          currentStock: Number(item.currentStock) || 0,
+          minStock: Number(item.minStock) || 0,
+          costPerUnit: Number(item.costPerUnit) || 0,
+        };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteInventoryItem(input.id);
+        return { success: true };
+      }),
+
+    // Stock movement (in/out/adjustment)
+    addTransaction: publicProcedure
+      .input(z.object({
+        inventoryId: z.number(),
+        type: z.enum(["in", "out", "adjustment"]),
+        quantity: z.number(),
+        note: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Create transaction record
+        const tx = await createInventoryTransaction({
+          inventoryId: input.inventoryId,
+          type: input.type,
+          quantity: String(input.quantity),
+          note: input.note || null,
+        });
+
+        // Update current stock
+        const item = await getInventoryById(input.inventoryId);
+        if (item) {
+          let newStock = Number(item.currentStock) || 0;
+          if (input.type === "in") {
+            newStock += input.quantity;
+          } else if (input.type === "out") {
+            newStock -= input.quantity;
+          } else {
+            newStock = input.quantity; // adjustment sets exact value
+          }
+          await updateInventoryItem(input.inventoryId, {
+            currentStock: String(Math.max(0, newStock)),
+            lastRestocked: input.type === "in" ? new Date() : undefined,
+          });
+        }
+
+        return { success: true, transaction: tx };
+      }),
+
+    getTransactions: publicProcedure
+      .input(z.object({ inventoryId: z.number() }))
+      .query(async ({ input }) => {
+        const txs = await getInventoryTransactions(input.inventoryId);
+        return txs.map(t => ({
+          ...t,
+          quantity: Number(t.quantity) || 0,
+        }));
+      }),
+  }),
+
+  // Worker routes
+  worker: router({
+    list: publicProcedure.query(async () => {
+      const workerList = await getAllWorkers();
+      return workerList.map(w => ({
+        ...w,
+        dailyWage: Number(w.dailyWage) || 0,
+      }));
+    }),
+
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const worker = await getWorkerById(input.id);
+        if (!worker) return null;
+        return { ...worker, dailyWage: Number(worker.dailyWage) || 0 };
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        role: z.enum(["carpenter", "painter", "packer", "supervisor", "general"]).default("general"),
+        phone: z.string().nullable().optional(),
+        dailyWage: z.number().default(0),
+        status: z.enum(["active", "inactive"]).default("active"),
+      }))
+      .mutation(async ({ input }) => {
+        const worker = await createWorker({
+          name: input.name,
+          role: input.role,
+          phone: input.phone || null,
+          dailyWage: String(input.dailyWage),
+          status: input.status,
+        });
+        return { ...worker, dailyWage: Number(worker.dailyWage) || 0 };
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        data: z.object({
+          name: z.string().min(1).optional(),
+          role: z.enum(["carpenter", "painter", "packer", "supervisor", "general"]).optional(),
+          phone: z.string().nullable().optional(),
+          dailyWage: z.number().optional(),
+          status: z.enum(["active", "inactive"]).optional(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        const data: any = { ...input.data };
+        if (data.dailyWage !== undefined) data.dailyWage = String(data.dailyWage);
+        const worker = await updateWorker(input.id, data);
+        if (!worker) return null;
+        return { ...worker, dailyWage: Number(worker.dailyWage) || 0 };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteWorker(input.id);
+        return { success: true };
       }),
   }),
 });
