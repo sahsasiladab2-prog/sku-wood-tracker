@@ -38,3 +38,7 @@
 - [x] Add Price Comparison Chart - show price trends over time for each channel
 - [x] Migrate project data from localStorage to database so all users see the same data
 - [x] Make all project data shared globally - everyone sees and edits the same data (no userId filtering)
+- [ ] Update wood material costs: 4c15200=33, 3c15200=23, 4s5200=105, 4s6200=115, 3s580=15, 4s580=30
+- [ ] Create pricing formula calculator (bound formula) for dynamic profit calculation
+- [ ] Integrate formula calculator into Calculator page
+- [ ] Integrate formula calculator into Tracker page (Manage Prices modal)
