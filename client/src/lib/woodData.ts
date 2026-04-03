@@ -72,7 +72,7 @@ export const woodData: WoodItem[] = [
   { code: "22100", description: "2 x 2 x 100", unit: "ซม.", refQty: 100, cost: 20 },
   { code: "42100", description: "4 x 2 x 100", unit: "ซม.", refQty: 100, cost: 80 },
   { code: "4s680", description: "4 x 6สลึง x 80", unit: "ซม.", refQty: 80, cost: 40 },
-  { code: "4s6100", description: "4 x 6สลึง x 100", unit: "ซม.", refQty: 100, cost: 60 },
+  { code: "4s6100", description: "4 x 6สลึง x 100", unit: "ซม.", refQty: 100, cost: 40 },
   { code: "4s6200", description: "4 x 6สลึง x 200", unit: "ซม.", refQty: 200, cost: 115 },
   { code: "315200", description: "3 x 1.5\"x 200", unit: "ซม.", refQty: 200, cost: 70 },
   { code: "415200", description: "4 x 1.5\"x 200", unit: "ซม.", refQty: 200, cost: 110 },
