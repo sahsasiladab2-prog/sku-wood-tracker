@@ -375,9 +375,6 @@ export default function WoodPrices() {
                     <TableHeader>
                       <TableRow className="border-b-2 border-black bg-gray-50">
                         <TableHead className="font-bold text-black uppercase text-xs w-32">รหัสไม้</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs">คำอธิบาย</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-center w-20">หน่วย</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-center w-24">ปริมาณอ้างอิง</TableHead>
                         <TableHead className="font-bold text-black uppercase text-xs text-right w-36">
                           <div className="flex items-center justify-end gap-1">
                             <Tag className="w-3 h-3 text-amber-600" />
@@ -407,9 +404,6 @@ export default function WoodPrices() {
                           <TableCell className="font-mono font-bold text-sm text-chart-3">
                             {item.code}
                           </TableCell>
-                          <TableCell className="text-sm">{item.description}</TableCell>
-                          <TableCell className="text-center text-sm text-muted-foreground">{item.unit}</TableCell>
-                          <TableCell className="text-center text-sm text-muted-foreground">{item.refQty}</TableCell>
 
                           {/* ราคาตลาด column */}
                           <TableCell className="text-right">
