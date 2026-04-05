@@ -1,0 +1,1 @@
+ALTER TABLE `wood_materials` ADD `marketPrice` decimal(10,2);

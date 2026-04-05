@@ -104,6 +104,7 @@ export const woodMaterials = mysqlTable("wood_materials", {
   unit: varchar("unit", { length: 32 }).notNull().default("ซม."),
   refQty: int("refQty").notNull().default(100),
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
+  marketPrice: decimal("marketPrice", { precision: 10, scale: 2 }),
   isActive: int("isActive").notNull().default(1),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -456,6 +456,7 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
       return materials.map(m => ({
         ...m,
         cost: Number(m.cost),
+        marketPrice: m.marketPrice !== null ? Number(m.marketPrice) : null,
       }));
     }),
 
@@ -479,11 +480,12 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
         code: z.string(),
         newPrice: z.number(),
         note: z.string().optional(),
+        marketPrice: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const updated = await updateWoodMaterialPrice(input.code, input.newPrice, input.note);
+        const updated = await updateWoodMaterialPrice(input.code, input.newPrice, input.note, input.marketPrice);
         if (!updated) throw new Error('Wood material not found');
-        return { ...updated, cost: Number(updated.cost) };
+        return { ...updated, cost: Number(updated.cost), marketPrice: updated.marketPrice !== null ? Number(updated.marketPrice) : null };
       }),
 
     // Add or update a wood material
@@ -494,10 +496,28 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
         unit: z.string(),
         refQty: z.number(),
         cost: z.number(),
+        marketPrice: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const result = await upsertWoodMaterial({ ...input, cost: String(input.cost) });
-        return { ...result, cost: Number(result.cost) };
+        const result = await upsertWoodMaterial({ ...input, cost: String(input.cost), marketPrice: input.marketPrice !== undefined ? String(input.marketPrice) : null });
+        return { ...result, cost: Number(result.cost), marketPrice: result.marketPrice !== null ? Number(result.marketPrice) : null };
+      }),
+
+    // Update market price only
+    updateMarketPrice: publicProcedure
+      .input(z.object({
+        code: z.string(),
+        marketPrice: z.number().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await (await import('./db')).getDb();
+        if (!db) throw new Error('Database not available');
+        const { woodMaterials } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        await db.update(woodMaterials).set({ marketPrice: input.marketPrice !== null ? String(input.marketPrice) : null, updatedAt: new Date() }).where(eq(woodMaterials.code, input.code));
+        const result = await (await import('./db')).getWoodMaterialByCode(input.code);
+        if (!result) throw new Error('Wood material not found');
+        return { ...result, cost: Number(result.cost), marketPrice: result.marketPrice !== null ? Number(result.marketPrice) : null };
       }),
 
     // Get price history for a wood material (or all)

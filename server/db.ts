@@ -288,7 +288,7 @@ export async function upsertWoodMaterial(data: InsertWoodMaterial): Promise<Wood
 
   // Upsert
   await db.insert(woodMaterials).values(data).onDuplicateKeyUpdate({
-    set: { cost: data.cost, description: data.description, unit: data.unit, refQty: data.refQty, updatedAt: new Date() }
+    set: { cost: data.cost, description: data.description, unit: data.unit, refQty: data.refQty, marketPrice: data.marketPrice ?? existing?.marketPrice ?? null, updatedAt: new Date() }
   });
 
   // Record price history if price changed
@@ -312,7 +312,7 @@ export async function upsertWoodMaterial(data: InsertWoodMaterial): Promise<Wood
   return result[0];
 }
 
-export async function updateWoodMaterialPrice(code: string, newPrice: number, note?: string): Promise<WoodMaterial | undefined> {
+export async function updateWoodMaterialPrice(code: string, newPrice: number, note?: string, marketPrice?: number): Promise<WoodMaterial | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -321,7 +321,12 @@ export async function updateWoodMaterialPrice(code: string, newPrice: number, no
 
   const oldPrice = existing.cost;
 
-  await db.update(woodMaterials).set({ cost: String(newPrice), updatedAt: new Date() }).where(eq(woodMaterials.code, code));
+  const updateData: Record<string, unknown> = { cost: String(newPrice), updatedAt: new Date() };
+  if (marketPrice !== undefined) {
+    updateData.marketPrice = String(marketPrice);
+  }
+
+  await db.update(woodMaterials).set(updateData).where(eq(woodMaterials.code, code));
 
   // Record history
   if (String(oldPrice) !== String(newPrice)) {

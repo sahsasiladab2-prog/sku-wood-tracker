@@ -47,3 +47,8 @@
 - [x] Add woodMaterials table to DB with price history tracking
 - [x] Create Wood Price Management page (editable table + history)
 - [x] Update Calculator to load wood prices from DB
+
+## Market Price Feature
+- [x] Add marketPrice field to woodMaterials DB schema
+- [x] Update backend API to support marketPrice (upsert, updatePrice, getAll)
+- [x] Update WoodPrices UI: rename "ราคา Default" to "ราคาตลาด", allow editing, show savings badge

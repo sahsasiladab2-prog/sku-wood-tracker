@@ -38,6 +38,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Tag,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,10 +47,11 @@ export default function WoodPrices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
+  const [editMarketPrice, setEditMarketPrice] = useState<string>("");
   const [editNote, setEditNote] = useState<string>("");
   const [historyFilter, setHistoryFilter] = useState<string>("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ code: "", description: "", unit: "ซม.", refQty: 100, cost: "" });
+  const [newItem, setNewItem] = useState({ code: "", description: "", unit: "ซม.", refQty: 100, cost: "", marketPrice: "" });
   const [isSeedingAll, setIsSeedingAll] = useState(false);
 
   const utils = trpc.useUtils();
@@ -67,6 +70,7 @@ export default function WoodPrices() {
       toast.success("อัปเดตราคาสำเร็จ!", { description: "ราคาใหม่จะใช้กับโปรเจกต์ใหม่เท่านั้น" });
       setEditingCode(null);
       setEditPrice("");
+      setEditMarketPrice("");
       setEditNote("");
     },
     onError: (err) => {
@@ -80,7 +84,7 @@ export default function WoodPrices() {
       utils.wood.getPriceHistory.invalidate();
       toast.success("บันทึกรายการสำเร็จ!");
       setAddDialogOpen(false);
-      setNewItem({ code: "", description: "", unit: "ซม.", refQty: 100, cost: "" });
+      setNewItem({ code: "", description: "", unit: "ซม.", refQty: 100, cost: "", marketPrice: "" });
     },
     onError: (err) => {
       toast.error("เกิดข้อผิดพลาด", { description: err.message });
@@ -122,8 +126,8 @@ export default function WoodPrices() {
         description: db?.description || local?.description || code,
         unit: db?.unit || local?.unit || "ซม.",
         refQty: db?.refQty || local?.refQty || 100,
-        localCost: local?.cost ?? null,
         dbCost: db ? db.cost : null,
+        marketPrice: db?.marketPrice ?? null,
         currentCost: db ? db.cost : (local?.cost ?? 0),
         inDb: !!db,
         updatedAt: db?.updatedAt ?? null,
@@ -146,15 +150,21 @@ export default function WoodPrices() {
   const stats = useMemo(() => {
     const inDb = mergedMaterials.filter((m) => m.inDb).length;
     const notInDb = mergedMaterials.filter((m) => !m.inDb).length;
-    const diffPrices = mergedMaterials.filter(
-      (m) => m.inDb && m.localCost !== null && m.dbCost !== m.localCost
-    ).length;
-    return { total: mergedMaterials.length, inDb, notInDb, diffPrices };
+    const withMarket = mergedMaterials.filter((m) => m.marketPrice !== null).length;
+    const savings = mergedMaterials.reduce((sum, m) => {
+      if (m.marketPrice !== null && m.dbCost !== null) {
+        const diff = m.marketPrice - m.dbCost;
+        if (diff > 0) return sum + diff;
+      }
+      return sum;
+    }, 0);
+    return { total: mergedMaterials.length, inDb, notInDb, withMarket, savings };
   }, [mergedMaterials]);
 
-  const handleStartEdit = (code: string, currentCost: number) => {
+  const handleStartEdit = (code: string, currentCost: number, currentMarketPrice: number | null) => {
     setEditingCode(code);
     setEditPrice(String(currentCost));
+    setEditMarketPrice(currentMarketPrice !== null ? String(currentMarketPrice) : "");
     setEditNote("");
   };
 
@@ -164,7 +174,13 @@ export default function WoodPrices() {
       toast.error("กรุณาใส่ราคาที่ถูกต้อง");
       return;
     }
-    updatePriceMutation.mutate({ code, newPrice: Math.ceil(price), note: editNote || undefined });
+    const marketPriceVal = editMarketPrice.trim() !== "" ? parseFloat(editMarketPrice) : undefined;
+    updatePriceMutation.mutate({
+      code,
+      newPrice: Math.ceil(price),
+      note: editNote || undefined,
+      marketPrice: marketPriceVal !== undefined && !isNaN(marketPriceVal) ? Math.ceil(marketPriceVal) : undefined,
+    });
   };
 
   const handleSeedAll = () => {
@@ -186,31 +202,41 @@ export default function WoodPrices() {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
+    const marketPriceVal = newItem.marketPrice.trim() !== "" ? parseFloat(newItem.marketPrice) : undefined;
     upsertMutation.mutate({
       code: newItem.code,
       description: newItem.description,
       unit: newItem.unit,
       refQty: newItem.refQty,
       cost: Math.ceil(cost),
+      marketPrice: marketPriceVal !== undefined && !isNaN(marketPriceVal) ? Math.ceil(marketPriceVal) : undefined,
     });
   };
 
-  const getPriceDiffBadge = (item: typeof mergedMaterials[0]) => {
-    if (!item.inDb || item.localCost === null) return null;
-    const diff = item.dbCost! - item.localCost;
-    if (diff === 0) return null;
-    if (diff > 0) {
+  // Badge showing savings vs market price
+  const getSavingsBadge = (item: typeof mergedMaterials[0]) => {
+    if (item.marketPrice === null || item.dbCost === null) return null;
+    const savings = item.marketPrice - item.dbCost;
+    if (savings > 0) {
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[10px] font-bold gap-1 ml-1">
+          <Sparkles className="w-3 h-3" />
+          ประหยัด {savings}฿
+        </Badge>
+      );
+    }
+    if (savings < 0) {
       return (
         <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] font-bold gap-1 ml-1">
           <TrendingUp className="w-3 h-3" />
-          +{diff}
+          แพงกว่าตลาด {Math.abs(savings)}฿
         </Badge>
       );
     }
     return (
-      <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px] font-bold gap-1 ml-1">
-        <TrendingDown className="w-3 h-3" />
-        {diff}
+      <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-[10px] font-bold gap-1 ml-1">
+        <Minus className="w-3 h-3" />
+        เท่ากัน
       </Badge>
     );
   };
@@ -232,7 +258,7 @@ export default function WoodPrices() {
             ราคาไม้
           </h1>
           <p className="text-muted-foreground font-medium mt-1 text-sm md:text-base">
-            จัดการราคาไม้ทุกชนิด — แก้ไขราคาและดูประวัติการเปลี่ยนแปลง
+            จัดการราคาไม้ทุกชนิด — เปรียบเทียบราคาตลาดกับราคาที่คุณได้มา
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -286,20 +312,20 @@ export default function WoodPrices() {
         </Card>
         <Card className="neo-card bg-white">
           <CardContent className="p-4 flex flex-col items-center text-center gap-1">
-            <div className="w-10 h-10 bg-chart-5 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <AlertTriangle className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-emerald-400 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
+              <Tag className="w-5 h-5 text-white" />
             </div>
-            <h3 className="font-heading text-2xl font-bold text-orange-500">{stats.notInDb}</h3>
-            <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">ยังไม่ใน DB</p>
+            <h3 className="font-heading text-2xl font-bold text-emerald-600">{stats.withMarket}</h3>
+            <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">มีราคาตลาด</p>
           </CardContent>
         </Card>
         <Card className="neo-card bg-white">
           <CardContent className="p-4 flex flex-col items-center text-center gap-1">
             <div className="w-10 h-10 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <TrendingUp className="w-5 h-5 text-white" />
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <h3 className="font-heading text-2xl font-bold text-blue-600">{stats.diffPrices}</h3>
-            <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">ราคาต่างจาก Default</p>
+            <h3 className="font-heading text-2xl font-bold text-blue-600">฿{stats.savings}</h3>
+            <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">ประหยัดรวม/100ซม.</p>
           </CardContent>
         </Card>
       </div>
@@ -350,12 +376,23 @@ export default function WoodPrices() {
                       <TableRow className="border-b-2 border-black bg-gray-50">
                         <TableHead className="font-bold text-black uppercase text-xs w-32">รหัสไม้</TableHead>
                         <TableHead className="font-bold text-black uppercase text-xs">คำอธิบาย</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-center w-24">หน่วย</TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-center w-20">หน่วย</TableHead>
                         <TableHead className="font-bold text-black uppercase text-xs text-center w-24">ปริมาณอ้างอิง</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-right w-32">ราคา Default</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-right w-36">ราคาปัจจุบัน (DB)</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-center w-28">สถานะ</TableHead>
-                        <TableHead className="font-bold text-black uppercase text-xs text-center w-32">จัดการ</TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-right w-36">
+                          <div className="flex items-center justify-end gap-1">
+                            <Tag className="w-3 h-3 text-amber-600" />
+                            <span className="text-amber-700">ราคาตลาด</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-right w-40">
+                          <div className="flex items-center justify-end gap-1">
+                            <Sparkles className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-700">ราคาที่ได้ (DB)</span>
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-center w-36">ส่วนต่าง</TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-center w-24">สถานะ</TableHead>
+                        <TableHead className="font-bold text-black uppercase text-xs text-center w-24">จัดการ</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -373,18 +410,43 @@ export default function WoodPrices() {
                           <TableCell className="text-sm">{item.description}</TableCell>
                           <TableCell className="text-center text-sm text-muted-foreground">{item.unit}</TableCell>
                           <TableCell className="text-center text-sm text-muted-foreground">{item.refQty}</TableCell>
-                          <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                            {item.localCost !== null ? `฿${item.localCost}` : "-"}
-                          </TableCell>
+
+                          {/* ราคาตลาด column */}
                           <TableCell className="text-right">
                             {editingCode === item.code ? (
                               <div className="flex items-center gap-1 justify-end">
-                                <span className="text-sm font-bold">฿</span>
+                                <span className="text-xs text-amber-600 font-bold">฿</span>
+                                <Input
+                                  type="number"
+                                  value={editMarketPrice}
+                                  onChange={(e) => setEditMarketPrice(e.target.value)}
+                                  placeholder="ราคาตลาด"
+                                  className="w-20 h-7 text-sm border-2 border-amber-400 text-right"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSavePrice(item.code);
+                                    if (e.key === "Escape") setEditingCode(null);
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <span className="font-mono text-sm text-amber-700 font-semibold">
+                                {item.marketPrice !== null ? `฿${item.marketPrice}` : (
+                                  <span className="text-gray-300 text-xs italic">-</span>
+                                )}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          {/* ราคาที่ได้ (DB) column */}
+                          <TableCell className="text-right">
+                            {editingCode === item.code ? (
+                              <div className="flex items-center gap-1 justify-end">
+                                <span className="text-sm font-bold text-emerald-600">฿</span>
                                 <Input
                                   type="number"
                                   value={editPrice}
                                   onChange={(e) => setEditPrice(e.target.value)}
-                                  className="w-20 h-7 text-sm border-2 border-chart-3 text-right"
+                                  className="w-20 h-7 text-sm border-2 border-emerald-500 text-right"
                                   autoFocus
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter") handleSavePrice(item.code);
@@ -393,17 +455,21 @@ export default function WoodPrices() {
                                 />
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 justify-end">
-                                <span className={cn(
-                                  "font-mono font-bold text-sm",
-                                  item.inDb ? "text-black" : "text-muted-foreground italic"
-                                )}>
-                                  {item.inDb ? `฿${item.dbCost}` : `฿${item.localCost ?? 0}`}
-                                </span>
-                                {getPriceDiffBadge(item)}
-                              </div>
+                              <span className={cn(
+                                "font-mono font-bold text-sm",
+                                item.inDb ? "text-emerald-700" : "text-muted-foreground italic"
+                              )}>
+                                {item.inDb ? `฿${item.dbCost}` : `฿${item.currentCost}`}
+                              </span>
                             )}
                           </TableCell>
+
+                          {/* ส่วนต่าง column */}
+                          <TableCell className="text-center">
+                            {getSavingsBadge(item)}
+                          </TableCell>
+
+                          {/* สถานะ column */}
                           <TableCell className="text-center">
                             {item.inDb ? (
                               <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px] font-bold">
@@ -417,6 +483,8 @@ export default function WoodPrices() {
                               </Badge>
                             )}
                           </TableCell>
+
+                          {/* จัดการ column */}
                           <TableCell className="text-center">
                             {editingCode === item.code ? (
                               <div className="flex items-center gap-1 justify-center">
@@ -438,17 +506,15 @@ export default function WoodPrices() {
                                 </Button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 justify-center">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 border-2 border-black shadow-[1px_1px_0px_0px_#000000] hover:bg-yellow-100"
-                                  onClick={() => handleStartEdit(item.code, item.currentCost)}
-                                  title="แก้ไขราคา"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </Button>
-                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 border-2 border-black shadow-[1px_1px_0px_0px_#000000] hover:bg-yellow-100"
+                                onClick={() => handleStartEdit(item.code, item.currentCost, item.marketPrice)}
+                                title="แก้ไขราคา"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
                             )}
                           </TableCell>
                         </TableRow>
@@ -465,15 +531,34 @@ export default function WoodPrices() {
             </CardContent>
           </Card>
 
-          {/* Inline note field when editing */}
+          {/* Inline note + save bar when editing */}
           {editingCode && (
             <Card className="neo-card bg-blue-50 border-2 border-chart-3 mt-2">
               <CardContent className="p-3 flex flex-col md:flex-row items-center gap-3">
                 <span className="text-sm font-bold text-chart-3 whitespace-nowrap">
-                  แก้ไขราคา: <code className="font-mono">{editingCode}</code>
+                  แก้ไข: <code className="font-mono">{editingCode}</code>
                 </span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                  <Tag className="w-4 h-4 text-amber-500" />
+                  ราคาตลาด: ฿{editMarketPrice || "—"}
+                  <span className="mx-1">→</span>
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  ราคาที่ได้: ฿{editPrice || "—"}
+                  {editMarketPrice && editPrice && !isNaN(parseFloat(editMarketPrice)) && !isNaN(parseFloat(editPrice)) && (
+                    <Badge className={cn(
+                      "text-[10px] font-bold ml-1",
+                      parseFloat(editMarketPrice) - parseFloat(editPrice) > 0
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                        : "bg-red-100 text-red-700 border-red-200"
+                    )}>
+                      {parseFloat(editMarketPrice) - parseFloat(editPrice) > 0
+                        ? `ประหยัด ${Math.ceil(parseFloat(editMarketPrice) - parseFloat(editPrice))}฿`
+                        : `แพงกว่า ${Math.abs(Math.ceil(parseFloat(editMarketPrice) - parseFloat(editPrice)))}฿`}
+                    </Badge>
+                  )}
+                </div>
                 <Input
-                  placeholder="หมายเหตุ (ไม่บังคับ) เช่น ต่อราคาลุงบาน 2026/04"
+                  placeholder="หมายเหตุ เช่น ต่อราคาลุงบาน 2026/04"
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value)}
                   className="flex-1 border-2 border-chart-3 text-sm h-8"
@@ -485,7 +570,7 @@ export default function WoodPrices() {
                   disabled={updatePriceMutation.isPending}
                 >
                   <Save className="w-4 h-4 mr-1" />
-                  บันทึกราคา
+                  บันทึก
                 </Button>
                 <Button
                   size="sm"
@@ -660,15 +745,31 @@ export default function WoodPrices() {
                 />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-bold uppercase text-muted-foreground mb-1 block">ราคา (บาท) *</label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={newItem.cost}
-                onChange={(e) => setNewItem({ ...newItem, cost: e.target.value })}
-                className="border-2 border-black"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-bold uppercase text-amber-700 mb-1 block flex items-center gap-1">
+                  <Tag className="w-3 h-3" /> ราคาตลาด (บาท)
+                </label>
+                <Input
+                  type="number"
+                  placeholder="เช่น 25"
+                  value={newItem.marketPrice}
+                  onChange={(e) => setNewItem({ ...newItem, marketPrice: e.target.value })}
+                  className="border-2 border-amber-400"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold uppercase text-emerald-700 mb-1 block flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> ราคาที่ได้ (บาท) *
+                </label>
+                <Input
+                  type="number"
+                  placeholder="เช่น 23"
+                  value={newItem.cost}
+                  onChange={(e) => setNewItem({ ...newItem, cost: e.target.value })}
+                  className="border-2 border-emerald-500"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-2">
