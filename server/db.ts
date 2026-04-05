@@ -260,3 +260,108 @@ export async function bulkCreatePriceHistory(historyList: InsertPriceHistory[]):
   
   return historyList.length;
 }
+
+// ============ Wood Materials Functions ============
+
+import { woodMaterials, woodPriceHistory, InsertWoodMaterial, WoodMaterial, InsertWoodPriceHistory, WoodPriceHistory } from "../drizzle/schema";
+
+export async function getAllWoodMaterials(): Promise<WoodMaterial[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(woodMaterials).where(eq(woodMaterials.isActive, 1)).orderBy(woodMaterials.code);
+}
+
+export async function getWoodMaterialByCode(code: string): Promise<WoodMaterial | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(woodMaterials).where(eq(woodMaterials.code, code)).limit(1);
+  return result[0];
+}
+
+export async function upsertWoodMaterial(data: InsertWoodMaterial): Promise<WoodMaterial> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get old price for history
+  const existing = await getWoodMaterialByCode(data.code);
+  const oldPrice = existing ? existing.cost : null;
+
+  // Upsert
+  await db.insert(woodMaterials).values(data).onDuplicateKeyUpdate({
+    set: { cost: data.cost, description: data.description, unit: data.unit, refQty: data.refQty, updatedAt: new Date() }
+  });
+
+  // Record price history if price changed
+  if (oldPrice !== null && String(oldPrice) !== String(data.cost)) {
+    await db.insert(woodPriceHistory).values({
+      woodCode: data.code,
+      oldPrice: String(oldPrice),
+      newPrice: String(data.cost),
+    });
+  } else if (oldPrice === null) {
+    // New material - record initial price
+    await db.insert(woodPriceHistory).values({
+      woodCode: data.code,
+      oldPrice: null,
+      newPrice: String(data.cost),
+      note: "เพิ่มรายการใหม่",
+    });
+  }
+
+  const result = await db.select().from(woodMaterials).where(eq(woodMaterials.code, data.code)).limit(1);
+  return result[0];
+}
+
+export async function updateWoodMaterialPrice(code: string, newPrice: number, note?: string): Promise<WoodMaterial | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getWoodMaterialByCode(code);
+  if (!existing) return undefined;
+
+  const oldPrice = existing.cost;
+
+  await db.update(woodMaterials).set({ cost: String(newPrice), updatedAt: new Date() }).where(eq(woodMaterials.code, code));
+
+  // Record history
+  if (String(oldPrice) !== String(newPrice)) {
+    await db.insert(woodPriceHistory).values({
+      woodCode: code,
+      oldPrice: String(oldPrice),
+      newPrice: String(newPrice),
+      note: note ?? null,
+    });
+  }
+
+  return getWoodMaterialByCode(code);
+}
+
+export async function getWoodPriceHistory(code?: string): Promise<WoodPriceHistory[]> {
+  const db = await getDb();
+  if (!db) return [];
+  if (code) {
+    return db.select().from(woodPriceHistory).where(eq(woodPriceHistory.woodCode, code)).orderBy(desc(woodPriceHistory.changedAt));
+  }
+  return db.select().from(woodPriceHistory).orderBy(desc(woodPriceHistory.changedAt));
+}
+
+export async function seedWoodMaterials(materials: InsertWoodMaterial[]): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  let seeded = 0;
+  for (const m of materials) {
+    const existing = await getWoodMaterialByCode(m.code);
+    if (!existing) {
+      await db.insert(woodMaterials).values(m);
+      await db.insert(woodPriceHistory).values({
+        woodCode: m.code,
+        oldPrice: null,
+        newPrice: String(m.cost),
+        note: "ราคาเริ่มต้น",
+      });
+      seeded++;
+    }
+  }
+  return seeded;
+}

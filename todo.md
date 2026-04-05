@@ -42,3 +42,8 @@
 - [ ] Create pricing formula calculator (bound formula) for dynamic profit calculation
 - [ ] Integrate formula calculator into Calculator page
 - [ ] Integrate formula calculator into Tracker page (Manage Prices modal)
+- [x] Duplicate latest versions of วงกบประตู (all sizes except 70*200 and 80*200) with updated wood prices and notes
+- [x] Create วงกบประตู 180*200 v.1 by copying from 160*200 latest version
+- [x] Add woodMaterials table to DB with price history tracking
+- [x] Create Wood Price Management page (editable table + history)
+- [x] Update Calculator to load wood prices from DB

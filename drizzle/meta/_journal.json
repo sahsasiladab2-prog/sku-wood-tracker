@@ -22,6 +22,13 @@
       "when": 1770312930000,
       "tag": "0002_wise_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1775372583869,
+      "tag": "0003_curvy_odin",
+      "breakpoints": true
     }
   ]
 }

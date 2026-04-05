@@ -92,3 +92,37 @@ export const priceHistory = mysqlTable("price_history", {
 
 export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = typeof priceHistory.$inferInsert;
+
+/**
+ * Wood Materials master table - stores all wood types and their current prices
+ * This is the single source of truth for wood prices used in Calculator
+ */
+export const woodMaterials = mysqlTable("wood_materials", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  description: varchar("description", { length: 255 }).notNull(),
+  unit: varchar("unit", { length: 32 }).notNull().default("ซม."),
+  refQty: int("refQty").notNull().default(100),
+  cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
+  isActive: int("isActive").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WoodMaterial = typeof woodMaterials.$inferSelect;
+export type InsertWoodMaterial = typeof woodMaterials.$inferInsert;
+
+/**
+ * Wood Price History table - records every price change for each wood material
+ */
+export const woodPriceHistory = mysqlTable("wood_price_history", {
+  id: int("id").autoincrement().primaryKey(),
+  woodCode: varchar("woodCode", { length: 64 }).notNull(),
+  oldPrice: decimal("oldPrice", { precision: 10, scale: 2 }),
+  newPrice: decimal("newPrice", { precision: 10, scale: 2 }).notNull(),
+  changedAt: timestamp("changedAt").defaultNow().notNull(),
+  note: text("note"),
+});
+
+export type WoodPriceHistory = typeof woodPriceHistory.$inferSelect;
+export type InsertWoodPriceHistory = typeof woodPriceHistory.$inferInsert;

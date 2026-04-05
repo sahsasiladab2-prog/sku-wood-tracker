@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, LayoutDashboard, Trophy, Upload, LogIn, LogOut, User } from "lucide-react";
+import { Calculator, LayoutDashboard, Trophy, Upload, LogIn, LogOut, User, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -19,6 +19,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
     { path: "/calculator", label: "Calculator", icon: Calculator },
     { path: "/tracker", label: "Tracker", icon: Trophy },
+    { path: "/wood-prices", label: "ราคาไม้", icon: Layers },
   ];
 
   return (

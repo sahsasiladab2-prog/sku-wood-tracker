@@ -13,7 +13,12 @@ import {
   getAllProjects,
   getAllProjectsShared,
   bulkCreatePriceHistory,
-  getPriceHistoryByProjectId
+  getPriceHistoryByProjectId,
+  getAllWoodMaterials,
+  updateWoodMaterialPrice,
+  upsertWoodMaterial,
+  getWoodPriceHistory,
+  seedWoodMaterials,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { nanoid } from "nanoid";
@@ -439,6 +444,71 @@ ${downloadUrl ? `✅ **ลิงก์นี้ไม่มีวันหมด
           newPrice: Number(h.newPrice) || 0,
           oldFeePercent: Number(h.oldFeePercent) || 0,
           newFeePercent: Number(h.newFeePercent) || 0,
+        }));
+      }),
+  }),
+
+  // ============ Wood Materials Router ============
+  wood: router({
+    // Get all wood materials
+    getAll: publicProcedure.query(async () => {
+      const materials = await getAllWoodMaterials();
+      return materials.map(m => ({
+        ...m,
+        cost: Number(m.cost),
+      }));
+    }),
+
+    // Seed wood materials from woodData.ts (run once)
+    seed: publicProcedure
+      .input(z.array(z.object({
+        code: z.string(),
+        description: z.string(),
+        unit: z.string(),
+        refQty: z.number(),
+        cost: z.number(),
+      })))
+      .mutation(async ({ input }) => {
+        const seeded = await seedWoodMaterials(input.map(m => ({ ...m, cost: String(m.cost) })));
+        return { seeded };
+      }),
+
+    // Update price of a single wood material
+    updatePrice: publicProcedure
+      .input(z.object({
+        code: z.string(),
+        newPrice: z.number(),
+        note: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const updated = await updateWoodMaterialPrice(input.code, input.newPrice, input.note);
+        if (!updated) throw new Error('Wood material not found');
+        return { ...updated, cost: Number(updated.cost) };
+      }),
+
+    // Add or update a wood material
+    upsert: publicProcedure
+      .input(z.object({
+        code: z.string(),
+        description: z.string(),
+        unit: z.string(),
+        refQty: z.number(),
+        cost: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await upsertWoodMaterial({ ...input, cost: String(input.cost) });
+        return { ...result, cost: Number(result.cost) };
+      }),
+
+    // Get price history for a wood material (or all)
+    getPriceHistory: publicProcedure
+      .input(z.object({ code: z.string().optional() }))
+      .query(async ({ input }) => {
+        const history = await getWoodPriceHistory(input.code);
+        return history.map(h => ({
+          ...h,
+          oldPrice: h.oldPrice !== null ? Number(h.oldPrice) : null,
+          newPrice: Number(h.newPrice),
         }));
       }),
   }),
