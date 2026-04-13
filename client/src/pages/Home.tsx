@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProjects } from "@/contexts/ProjectContext";
 import { getProjectStats, getLatestProjects, getMarginHealth } from "@/lib/projectStats";
+import { SKUDrawer } from "@/components/SKUDrawer";
 import {
   Trophy,
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Filter,
   History,
   DollarSign,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,7 @@ export default function Home() {
   const { projects } = useProjects();
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
   const [selectedHistorySku, setSelectedHistorySku] = useState<string>("all");
+  const [drawerProject, setDrawerProject] = useState<any | null>(null);
 
   // ── Derived data ─────────────────────────────────────────────────────────
   const availableChannels = useMemo(() => {
@@ -119,6 +122,13 @@ export default function Home() {
       });
   }, [projects, selectedHistorySku, selectedChannel]);
 
+  // ── SKU row click handler ────────────────────────────────────────────────
+  function openDrawer(project: any) {
+    // Merge full project data with computed stats
+    const stats = getProjectStats(project, selectedChannel === "all" ? undefined : selectedChannel);
+    setDrawerProject({ ...project, ...stats });
+  }
+
   return (
     <div className="space-y-6 pb-8">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -128,7 +138,7 @@ export default function Home() {
             Command Center
           </h1>
           <p className="text-muted-foreground font-medium mt-1 text-sm">
-            ภาพรวมผลกำไรและ SKU ทั้งหมด
+            ภาพรวมผลกำไรและ SKU ทั้งหมด — คลิก SKU เพื่อดูรายละเอียด
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -156,9 +166,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── KPI Cards (3 only) ──────────────────────────────────────────────── */}
+      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Active SKUs */}
         <Card className="neo-card bg-white">
           <CardContent className="p-5 flex items-center gap-4">
             <div className="w-12 h-12 bg-chart-1 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000] flex-shrink-0">
@@ -171,7 +180,6 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Avg Net Margin */}
         <Card className="neo-card bg-white">
           <CardContent className="p-5 flex items-center gap-4">
             <div
@@ -196,7 +204,6 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Potential Profit */}
         <Card className="neo-card bg-white">
           <CardContent className="p-5 flex items-center gap-4">
             <div className="w-12 h-12 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000] flex-shrink-0">
@@ -242,9 +249,10 @@ export default function Home() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {needsAttention.map((project) => (
-                    <div
+                    <button
                       key={project.id}
-                      className="p-4 flex items-center gap-3 hover:bg-red-50 transition-colors"
+                      className="w-full p-4 flex items-center gap-3 hover:bg-red-50 transition-colors text-left group"
+                      onClick={() => openDrawer(project)}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -263,16 +271,8 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-                      <Link href={`/calculator?id=${project.id}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all flex-shrink-0"
-                        >
-                          แก้ไข
-                        </Button>
-                      </Link>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-black transition-colors flex-shrink-0" />
+                    </button>
                   ))}
                 </div>
               )}
@@ -297,9 +297,10 @@ export default function Home() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {topProjects.map((project, i) => (
-                    <div
+                    <button
                       key={project.id}
-                      className="p-4 flex items-center gap-3 hover:bg-yellow-50 transition-colors"
+                      className="w-full p-4 flex items-center gap-3 hover:bg-yellow-50 transition-colors text-left group"
+                      onClick={() => openDrawer(project)}
                     >
                       <div
                         className={cn(
@@ -332,16 +333,8 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-                      <Link href={`/calculator?id=${project.id}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all flex-shrink-0"
-                        >
-                          Analyze
-                        </Button>
-                      </Link>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-black transition-colors flex-shrink-0" />
+                    </button>
                   ))}
                 </div>
               )}
@@ -416,7 +409,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Mini legend */}
               {selectedHistorySku !== "all" && historyChartData.length > 0 && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="w-4 h-0.5 bg-green-600 inline-block" />
@@ -427,6 +419,9 @@ export default function Home() {
           </Card>
         </div>
       </div>
+
+      {/* ── SKU Quick-View Drawer ──────────────────────────────────────────── */}
+      <SKUDrawer project={drawerProject} onClose={() => setDrawerProject(null)} />
     </div>
   );
 }

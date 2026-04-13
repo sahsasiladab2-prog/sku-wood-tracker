@@ -57,3 +57,8 @@
 - [x] Extract shared projectStats utility to client/src/lib/projectStats.ts
 - [x] Redesign Home.tsx: 3 KPI cards, Needs Attention list, Top 5 Performers, Margin History chart
 - [x] Remove clutter: cost structure pie chart, gamification level, broken charts
+
+## SKU Quick-View Drawer (Dashboard)
+- [x] Build SKUDrawer component: slide-in panel with channel comparison table, cost waterfall bar, action buttons
+- [x] Replace "Analyze" button in Needs Attention and Top Performers lists with row-click to open drawer
+- [x] Add "แก้ไขต้นทุน" (→ Calculator edit) and "อัปเดตราคาขาย" (inline price modal) action buttons in drawer
