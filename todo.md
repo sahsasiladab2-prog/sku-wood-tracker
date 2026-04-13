@@ -52,3 +52,8 @@
 - [x] Add marketPrice field to woodMaterials DB schema
 - [x] Update backend API to support marketPrice (upsert, updatePrice, getAll)
 - [x] Update WoodPrices UI: rename "ราคา Default" to "ราคาตลาด", allow editing, show savings badge
+
+## P0 Dashboard Redesign
+- [x] Extract shared projectStats utility to client/src/lib/projectStats.ts
+- [x] Redesign Home.tsx: 3 KPI cards, Needs Attention list, Top 5 Performers, Margin History chart
+- [x] Remove clutter: cost structure pie chart, gamification level, broken charts

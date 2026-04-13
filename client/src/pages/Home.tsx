@@ -1,333 +1,343 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProjects } from "@/contexts/ProjectContext";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, TrendingUp, Package, ArrowRight, Star, Target, AlertTriangle, DollarSign, PieChart as PieIcon, Filter, History } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useProjects } from "@/contexts/ProjectContext";
+import { getProjectStats, getLatestProjects, getMarginHealth } from "@/lib/projectStats";
+import {
+  Trophy,
+  TrendingUp,
+  Package,
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
+  Filter,
+  History,
+  DollarSign,
+} from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 import { useState, useMemo } from "react";
 
-export default function Home() {
+// ── Traffic light badge ──────────────────────────────────────────────────────
+function MarginBadge({ margin }: { margin: number }) {
+  const health = getMarginHealth(margin);
+  if (health === "healthy")
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border bg-green-100 text-green-700 border-green-300">
+        ✓ {margin}%
+      </span>
+    );
+  if (health === "warning")
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border bg-yellow-100 text-yellow-700 border-yellow-300">
+        ⚠ {margin}%
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border bg-red-100 text-red-700 border-red-300">
+      ✗ {margin}%
+    </span>
+  );
+}
 
+export default function Home() {
   const { projects } = useProjects();
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
   const [selectedHistorySku, setSelectedHistorySku] = useState<string>("all");
 
-  // Extract all unique channel names from all projects
+  // ── Derived data ─────────────────────────────────────────────────────────
   const availableChannels = useMemo(() => {
     const channels = new Set<string>();
-    projects.forEach(p => {
-      if (p.channels) {
-        p.channels.forEach((c: any) => channels.add(c.name));
-      }
-    });
+    projects.forEach((p) => p.channels?.forEach((c: any) => channels.add(c.name)));
     return Array.from(channels).sort();
   }, [projects]);
 
-  // Filter only the latest version of each SKU
-  const latestProjects = useMemo(() => {
-    const latestMap = new Map();
-    projects.forEach(p => {
-      const existing = latestMap.get(p.name);
-      // Ensure version comparison is numeric
-      const currentVer = Number(p.version) || 0;
-      const existingVer = existing ? (Number(existing.version) || 0) : -1;
-      
-      // We want to keep the latest version for EACH production type
-      // So the key should be name + productionType
-      const key = `${p.name}-${p.productionType || 'Outsource'}`;
-      const existingForKey = latestMap.get(key);
-      const existingVerForKey = existingForKey ? (Number(existingForKey.version) || 0) : -1;
+  const latestProjects = useMemo(() => getLatestProjects(projects), [projects]);
 
-      if (!existingForKey || currentVer > existingVerForKey) {
-        latestMap.set(key, p);
-      }
-    });
-    return Array.from(latestMap.values());
-  }, [projects]);
+  const activeProjects = useMemo(
+    () =>
+      latestProjects
+        .map((p) => ({ ...p, ...getProjectStats(p, selectedChannel === "all" ? undefined : selectedChannel) }))
+        .filter((p) => p.hasChannel),
+    [latestProjects, selectedChannel]
+  );
 
-  // Helper to get stats based on selected channel (Synced with Tracker.tsx logic)
-  const getProjectStats = (project: any) => {
-    // Logic from Tracker.tsx:
-    // Net Profit = Selling Price - Total Cost - Fee
-    // Net Margin = (Net Profit / Selling Price) * 100
-
-    // If a specific channel is selected
-    if (selectedChannel !== "all") {
-      const targetChannel = project.channels?.find((c: any) => c.name === selectedChannel);
-      if (targetChannel) {
-        // Recalculate to ensure consistency with Tracker
-        const price = targetChannel.price || 0;
-        const feePercent = targetChannel.feePercent || 0;
-        const fee = Math.ceil(price * (feePercent / 100));
-        const totalCost = project.totalCost || 0;
-        const netProfit = price - totalCost - fee;
-        const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
-
-        return {
-          margin: margin,
-          profit: netProfit,
-          price: price,
-          channelName: targetChannel.name,
-          hasChannel: true
-        };
-      }
-      // If project doesn't have this channel, return null stats
-      return {
-        margin: 0,
-        profit: 0,
-        price: 0,
-        channelName: '-',
-        hasChannel: false
-      };
-    }
-
-    // Default behavior: Best channel (Max Net Margin)
-    if (project.channels && project.channels.length > 0) {
-      // Calculate real margin for all channels first
-      const calculatedChannels = project.channels.map((c: any) => {
-        const price = c.price || 0;
-        const feePercent = c.feePercent || 0;
-        const fee = Math.ceil(price * (feePercent / 100));
-        const totalCost = project.totalCost || 0;
-        const netProfit = price - totalCost - fee;
-        const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
-        return { ...c, realMargin: margin, realProfit: netProfit };
-      });
-
-      const bestChannel = calculatedChannels.reduce((prev: any, current: any) => 
-        (current.realMargin > prev.realMargin) ? current : prev
-      );
-
-      return {
-        margin: bestChannel.realMargin,
-        profit: bestChannel.realProfit,
-        price: bestChannel.price,
-        channelName: bestChannel.name,
-        hasChannel: true
-      };
-    }
-    
-    // Fallback to legacy fields
-    const price = project.sellingPrice || 0;
-    const totalCost = project.totalCost || 0;
-    const netProfit = price - totalCost;
-    const margin = price > 0 ? parseFloat(((netProfit / price) * 100).toFixed(1)) : 0;
-
-    return {
-      margin: margin,
-      profit: netProfit,
-      price: price,
-      channelName: 'Default',
-      hasChannel: true
-    };
-  };
-
-  // Filter projects based on channel availability (using only latest versions)
-  const activeProjects = latestProjects.map(p => ({ ...p, ...getProjectStats(p) }))
-    .filter(p => p.hasChannel);
-
-  // Calculate stats
+  // KPI cards
   const activeSkus = activeProjects.length;
-  
-  const avgMargin = activeSkus > 0 
-    ? Math.round(activeProjects.reduce((sum, p) => sum + p.margin, 0) / activeSkus) 
-    : 0;
-  
-  // Financial Overview
-  const totalPotentialRevenue = activeProjects.reduce((sum, p) => sum + p.price, 0);
-  const totalPotentialProfit = activeProjects.reduce((sum, p) => sum + p.profit, 0);
-  
-  // Gamification Stats (Global - based on all history)
-  const totalXp = projects.reduce((sum, p) => sum + (p.totalCost > 5000 ? 1000 : 500), 0);
-  const level = Math.floor(totalXp / 1000) + 1;
+  const avgMargin = useMemo(
+    () =>
+      activeSkus > 0
+        ? Math.round(activeProjects.reduce((s, p) => s + p.margin, 0) / activeSkus)
+        : 0,
+    [activeProjects, activeSkus]
+  );
+  const totalPotentialProfit = useMemo(
+    () => activeProjects.reduce((s, p) => s + p.profit, 0),
+    [activeProjects]
+  );
 
-  // Get top projects by margin (Top 5), filtering out 0% or negative margins
-  const topProjects = [...activeProjects]
-    .filter(p => p.margin > 0)
-    .sort((a, b) => b.margin - a.margin)
-    .slice(0, 5);
+  // Needs Attention (margin < 15%), sorted worst first
+  const needsAttention = useMemo(
+    () => [...activeProjects].filter((p) => p.margin < 15).sort((a, b) => a.margin - b.margin),
+    [activeProjects]
+  );
 
-  // Identify Low Margin Projects (< 15%)
-  const lowMarginProjects = activeProjects.filter(p => p.margin < 15);
+  // Top 5 performers (margin > 0), sorted best first
+  const topProjects = useMemo(
+    () =>
+      [...activeProjects]
+        .filter((p) => p.margin > 0)
+        .sort((a, b) => b.margin - a.margin)
+        .slice(0, 5),
+    [activeProjects]
+  );
 
-  // Prepare Data for Net Margin History Chart
-  const uniqueSkuNames = useMemo(() => {
-    return Array.from(new Set(projects.map(p => p.name))).sort();
-  }, [projects]);
+  // Margin history chart
+  const uniqueSkuNames = useMemo(
+    () => Array.from(new Set(projects.map((p) => p.name))).sort(),
+    [projects]
+  );
 
   const historyChartData = useMemo(() => {
     if (selectedHistorySku === "all") return [];
-
-    // Filter projects by selected SKU name
-    const skuVersions = projects
-      .filter(p => p.name === selectedHistorySku)
-      .sort((a, b) => a.version - b.version); // Sort by version ascending
-
-    return skuVersions.map(v => {
-      const stats = getProjectStats(v);
-      return {
-        version: `v.${v.version}`,
-        margin: stats.margin,
-        profit: stats.profit
-      };
-    });
+    return projects
+      .filter((p) => p.name === selectedHistorySku)
+      .sort((a, b) => a.version - b.version)
+      .map((v) => {
+        const stats = getProjectStats(v, selectedChannel === "all" ? undefined : selectedChannel);
+        return { version: `v.${v.version}`, margin: stats.margin, profit: stats.profit };
+      });
   }, [projects, selectedHistorySku, selectedChannel]);
 
-  // Cost Structure Analysis (using only latest versions)
-  const totalWoodCost = activeProjects.reduce((sum, p) => {
-    const woodCost = p.materials?.reduce((wSum: number, m: any) => wSum + (m.calculatedCost || 0), 0) || 0;
-    return sum + woodCost;
-  }, 0);
-  
-  const totalLaborCost = activeProjects.reduce((sum, p) => {
-    const labor = (p.costs?.carpenter || 0) + (p.costs?.painting || 0) + (p.costs?.packing || 0);
-    return sum + labor;
-  }, 0);
-
-  const totalWasteCost = activeProjects.reduce((sum, p) => sum + (p.costs?.waste || 0), 0);
-
-  const costData = [
-    { name: 'Wood Material', value: totalWoodCost, color: '#FFC107' }, // Amber
-    { name: 'Labor & Ops', value: totalLaborCost, color: '#2196F3' }, // Blue
-    { name: 'Waste', value: totalWasteCost, color: '#F44336' }, // Red
-  ].filter(item => item.value > 0);
-
   return (
-    <div className="space-y-6 md:space-y-8 pb-8">
-      {/* Header Section */}
+    <div className="space-y-6 pb-8">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-heading font-bold uppercase text-black drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">
-            Executive Command Center
+            Command Center
           </h1>
-          <p className="text-muted-foreground font-medium mt-1 text-sm md:text-base">
-            Overview of your wood empire's performance and profitability.
+          <p className="text-muted-foreground font-medium mt-1 text-sm">
+            ภาพรวมผลกำไรและ SKU ทั้งหมด
           </p>
         </div>
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
-          <div className="w-full md:w-[200px]">
-            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-              <SelectTrigger className="h-12 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <SelectValue placeholder="Filter Channel" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Best Channels</SelectItem>
-                {availableChannels.map(channel => (
-                  <SelectItem key={channel} value={channel}>{channel}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Link href="/calculator" className="w-full md:w-auto">
-            <Button className="w-full md:w-auto neo-button bg-chart-3 text-white hover:bg-blue-700 h-12 px-6 text-lg">
-              New Project <ArrowRight className="ml-2 w-5 h-5" />
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+            <SelectTrigger className="h-11 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold w-full sm:w-[180px]">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                <SelectValue placeholder="ทุก Channel" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุก Channel (Best)</SelectItem>
+              {availableChannels.map((ch) => (
+                <SelectItem key={ch} value={ch}>
+                  {ch}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Link href="/calculator">
+            <Button className="neo-button bg-chart-3 text-white hover:bg-blue-700 h-11 px-6 w-full sm:w-auto">
+              + New SKU <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Key Financial Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      {/* ── KPI Cards (3 only) ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Active SKUs */}
         <Card className="neo-card bg-white">
-          <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-chart-1 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <Package className="w-5 h-5 md:w-6 md:h-6 text-black" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 bg-chart-1 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000] flex-shrink-0">
+              <Package className="w-6 h-6 text-black" />
             </div>
-            <h3 className="font-heading text-2xl md:text-3xl font-bold mt-1 md:mt-2">{activeSkus}</h3>
-            <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest text-muted-foreground">Active SKUs</p>
+            <div>
+              <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Active SKUs</p>
+              <h3 className="font-heading text-3xl font-bold">{activeSkus}</h3>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Avg Net Margin */}
         <Card className="neo-card bg-white">
-          <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-chart-2 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div
+              className={cn(
+                "w-12 h-12 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000] flex-shrink-0",
+                avgMargin >= 25 ? "bg-green-400" : avgMargin >= 15 ? "bg-yellow-400" : "bg-red-400"
+              )}
+            >
+              <TrendingUp className="w-6 h-6 text-black" />
             </div>
-            <h3 className={cn("font-heading text-2xl md:text-3xl font-bold mt-1 md:mt-2", avgMargin < 15 ? "text-red-500" : "text-green-600")}>
-              {avgMargin}%
-            </h3>
-            <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest text-muted-foreground">Avg. Net Margin</p>
+            <div>
+              <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Avg Net Margin</p>
+              <h3
+                className={cn(
+                  "font-heading text-3xl font-bold",
+                  avgMargin >= 25 ? "text-green-600" : avgMargin >= 15 ? "text-yellow-600" : "text-red-500"
+                )}
+              >
+                {avgMargin}%
+              </h3>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Potential Profit */}
         <Card className="neo-card bg-white">
-          <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 bg-chart-4 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000] flex-shrink-0">
+              <DollarSign className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-heading text-2xl md:text-3xl font-bold mt-1 md:mt-2">฿{(totalPotentialProfit / 1000).toFixed(1)}k</h3>
-            <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest text-muted-foreground">Potential Profit</p>
-          </CardContent>
-        </Card>
-
-        <Card className="neo-card bg-white">
-          <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-chart-5 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
-              <Star className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            <div>
+              <p className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Potential Profit</p>
+              <h3 className="font-heading text-3xl font-bold">
+                ฿{totalPotentialProfit >= 1000
+                  ? `${(totalPotentialProfit / 1000).toFixed(1)}k`
+                  : totalPotentialProfit.toLocaleString()}
+              </h3>
             </div>
-            <h3 className="font-heading text-2xl md:text-3xl font-bold mt-1 md:mt-2">Lv.{level}</h3>
-            <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest text-muted-foreground">Wood Master</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        {/* Top Performers Leaderboard */}
+      {/* ── Main Grid ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Needs Attention + Top Performers */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="neo-card bg-white h-full">
-            <CardHeader className="border-b-2 border-black bg-yellow-400 text-black py-3 md:py-4">
-              <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
-                <Trophy className="w-6 h-6" /> Top Net Margin Performers
+
+          {/* Needs Attention */}
+          <Card className="neo-card bg-white">
+            <CardHeader className="border-b-2 border-black bg-red-50 py-3">
+              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2 text-red-700">
+                <AlertTriangle className="w-5 h-5" />
+                ต้องดูแล — Margin ต่ำกว่า 15%
+                {needsAttention.length > 0 && (
+                  <Badge className="ml-auto bg-red-500 text-white border-0">
+                    {needsAttention.length} SKU
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {needsAttention.length === 0 ? (
+                <div className="p-8 flex flex-col items-center gap-2 text-center">
+                  <CheckCircle2 className="w-10 h-10 text-green-500" />
+                  <p className="font-bold text-green-700">ทุก SKU มี Margin ดี!</p>
+                  <p className="text-sm text-muted-foreground">ไม่มี SKU ที่ต้องแก้ไขตอนนี้</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {needsAttention.map((project) => (
+                    <div
+                      key={project.id}
+                      className="p-4 flex items-center gap-3 hover:bg-red-50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-base uppercase">{project.name}</h4>
+                          {project.productionType === "In-House" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase bg-blue-50 text-blue-700 border-blue-200">
+                              In-House
+                            </span>
+                          )}
+                          <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-sm flex-wrap">
+                          <MarginBadge margin={project.margin} />
+                          <span className="text-muted-foreground">
+                            กำไร ฿{project.profit.toLocaleString()} · {project.channelName}
+                          </span>
+                        </div>
+                      </div>
+                      <Link href={`/calculator?id=${project.id}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all flex-shrink-0"
+                        >
+                          แก้ไข
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Performers */}
+          <Card className="neo-card bg-white">
+            <CardHeader className="border-b-2 border-black bg-yellow-400 py-3">
+              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2 text-black">
+                <Trophy className="w-5 h-5" /> Top 5 Net Margin
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {topProjects.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">No projects calculated yet.</div>
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>ยังไม่มี SKU ที่คำนวณแล้ว</p>
+                  <Link href="/calculator">
+                    <Button className="mt-3 neo-button bg-chart-3 text-white">สร้าง SKU แรก</Button>
+                  </Link>
+                </div>
               ) : (
-                <div className="divide-y-2 divide-black/10">
+                <div className="divide-y divide-gray-100">
                   {topProjects.map((project, i) => (
-                    <div key={project.id} className="p-4 flex items-center gap-4 hover:bg-yellow-50 transition-colors">
-                      <div className={cn(
-                        "w-10 h-10 md:w-12 md:h-12 border-2 border-black flex items-center justify-center font-black text-xl shadow-[2px_2px_0px_0px_#000000] flex-shrink-0",
-                        i === 0 ? "bg-yellow-300 text-black" : 
-                        i === 1 ? "bg-gray-300 text-black" : 
-                        i === 2 ? "bg-orange-300 text-black" : "bg-white text-gray-500"
-                      )}>
+                    <div
+                      key={project.id}
+                      className="p-4 flex items-center gap-3 hover:bg-yellow-50 transition-colors"
+                    >
+                      <div
+                        className={cn(
+                          "w-10 h-10 border-2 border-black flex items-center justify-center font-black text-lg shadow-[2px_2px_0px_0px_#000000] flex-shrink-0",
+                          i === 0
+                            ? "bg-yellow-300 text-black"
+                            : i === 1
+                            ? "bg-gray-300 text-black"
+                            : i === 2
+                            ? "bg-orange-300 text-black"
+                            : "bg-white text-gray-400"
+                        )}
+                      >
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <h4 className="font-bold text-lg md:text-xl uppercase truncate">{project.name}</h4>
-                          <div className="flex items-center gap-2">
-                            {project.productionType === "In-House" && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase bg-blue-50 text-blue-700 border-blue-200">
-                                In-House
-                              </span>
-                            )}
-                            <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded border border-green-200">
-                            Net Margin: {project.margin}%
-                          </span>
-                          <span className="text-muted-foreground font-medium">
-                            Profit: ฿{project.profit.toLocaleString()}
-                          </span>
-                          {project.channelName !== 'Default' && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
-                              via {project.channelName}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-base uppercase truncate">{project.name}</h4>
+                          {project.productionType === "In-House" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase bg-blue-50 text-blue-700 border-blue-200">
+                              In-House
                             </span>
                           )}
+                          <span className="font-mono text-xs text-muted-foreground">v.{project.version}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-sm flex-wrap">
+                          <MarginBadge margin={project.margin} />
+                          <span className="text-muted-foreground">
+                            กำไร ฿{project.profit.toLocaleString()} · {project.channelName}
+                          </span>
                         </div>
                       </div>
                       <Link href={`/calculator?id=${project.id}`}>
-                        <Button variant="outline" size="sm" className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all flex-shrink-0"
+                        >
                           Analyze
                         </Button>
                       </Link>
@@ -339,116 +349,80 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Cost Structure Analysis & Net Margin History */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <Card className="neo-card bg-white flex-1">
-            <CardHeader className="border-b-2 border-black py-3 md:py-4">
-              <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
-                <PieIcon className="w-5 h-5" /> Cost Structure
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 flex flex-col items-center justify-center min-h-[250px]">
-              {costData.length > 0 ? (
-                <div className="w-full h-[200px] relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={costData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {costData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={2} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
-                        formatter={(value: number) => `฿${value.toLocaleString()}`}
-                      />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center Text */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Cost</p>
-                      <p className="font-heading text-lg font-bold">฿{(totalWoodCost + totalLaborCost + totalWasteCost).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <p>No cost data available.</p>
-                  <p className="text-xs mt-2">Breakdown of costs across all active projects.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Net Margin History Chart */}
-          <Card className="neo-card bg-white flex-1">
-            <CardHeader className="border-b-2 border-black py-3 md:py-4 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="font-heading text-lg md:text-xl uppercase flex items-center gap-2">
+        {/* Right: Margin History Chart */}
+        <div className="lg:col-span-1">
+          <Card className="neo-card bg-white h-full">
+            <CardHeader className="border-b-2 border-black py-3">
+              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
                 <History className="w-5 h-5" /> Margin History
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="mb-4">
-                <Select value={selectedHistorySku} onValueChange={setSelectedHistorySku}>
-                  <SelectTrigger className="h-9 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold text-xs">
-                    <SelectValue placeholder="Select SKU to view history" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Select SKU...</SelectItem>
-                    {uniqueSkuNames.map(name => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="h-[180px] w-full">
+            <CardContent className="p-4 space-y-4">
+              <Select value={selectedHistorySku} onValueChange={setSelectedHistorySku}>
+                <SelectTrigger className="h-9 border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold text-xs">
+                  <SelectValue placeholder="เลือก SKU..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">เลือก SKU...</SelectItem>
+                  {uniqueSkuNames.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="h-[260px] w-full">
                 {selectedHistorySku !== "all" && historyChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historyChartData}>
+                    <LineChart data={historyChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="version" 
+                      <XAxis dataKey="version" stroke="#000" fontSize={10} tickMargin={5} />
+                      <YAxis
                         stroke="#000"
                         fontSize={10}
-                        tickMargin={5}
+                        tickFormatter={(v) => `${v}%`}
+                        domain={["auto", "auto"]}
                       />
-                      <YAxis 
-                        stroke="#000" 
-                        fontSize={10}
-                        tickFormatter={(val) => `${val}%`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ border: '2px solid black', borderRadius: '0px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.1)' }}
+                      <RechartsTooltip
+                        contentStyle={{
+                          border: "2px solid black",
+                          borderRadius: "0px",
+                          boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.1)",
+                        }}
                         labelFormatter={(v) => `${selectedHistorySku} (${v})`}
+                        formatter={(value: number, name: string) => [
+                          name === "margin" ? `${value}%` : `฿${value.toLocaleString()}`,
+                          name === "margin" ? "Net Margin" : "กำไร",
+                        ]}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="margin" 
-                        stroke="#16a34a" 
+                      <Line
+                        type="monotone"
+                        dataKey="margin"
+                        stroke="#16a34a"
                         strokeWidth={3}
-                        dot={{ r: 4, fill: "#16a34a", stroke: "#000", strokeWidth: 2 }}
-                        activeDot={{ r: 6, stroke: "#000", strokeWidth: 2 }}
-                        name="Net Margin"
+                        dot={{ r: 5, fill: "#16a34a", stroke: "#000", strokeWidth: 2 }}
+                        activeDot={{ r: 7, stroke: "#000", strokeWidth: 2 }}
+                        name="margin"
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                    <TrendingUp className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-sm font-medium">Select a SKU to view trend</p>
+                    <TrendingUp className="w-10 h-10 mb-2 opacity-20" />
+                    <p className="text-sm font-medium">เลือก SKU เพื่อดู Margin Trend</p>
+                    <p className="text-xs mt-1 opacity-60">เปรียบเทียบ margin แต่ละ version</p>
                   </div>
                 )}
               </div>
+
+              {/* Mini legend */}
+              {selectedHistorySku !== "all" && historyChartData.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="w-4 h-0.5 bg-green-600 inline-block" />
+                  <span>Net Margin (%) ต่อ version</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
