@@ -68,3 +68,9 @@
 - [x] Redesign Tracker: Tab 1 SKU Portfolio (Keep/Optimize/Review badges, sortable)
 - [x] Redesign Tracker: Tab 2 Version Timeline (per-SKU cost reduction history)
 - [x] Redesign Tracker: Tab 3 Cost Sensitivity (wood price impact + backsolve margin)
+
+## UI Improvements (Apr 2026)
+- [x] Remove +/- signs from profit fields app-wide, use green/red color instead
+- [x] Add cost-as-% of selling price label under cost numbers in SKU Analysis
+- [x] Fix bar labels in Tracker SKU Analysis (clarify "ไม้/ทุน" label → "ไม้/ต้นทุน%")
+- [x] Redesign cost breakdown bar to Profit Waterfall Bar with tooltips and margin threshold line

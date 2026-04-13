@@ -167,7 +167,7 @@ function PortfolioTab() {
                 <th className="text-right p-3 font-bold cursor-pointer select-none" onClick={() => toggleSort("margin")}>
                   Net Margin <SortIcon k="margin" />
                 </th>
-                <th className="text-center p-3 font-bold">ไม้/ต้นทุน</th>
+                <th className="text-center p-3 font-bold">ไม้/ต้นทุน%</th>
                 <th className="text-center p-3 font-bold cursor-pointer select-none" onClick={() => toggleSort("versions")}>
                   Versions <SortIcon k="versions" />
                 </th>
@@ -200,13 +200,16 @@ function PortfolioTab() {
                       : <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-orange-50 text-orange-700 border-orange-200">Outsource</span>
                     }
                   </td>
-                  <td className="p-3 text-right font-mono">฿{(row.totalCost || 0).toLocaleString()}</td>
+                  <td className="p-3 text-right font-mono">
+                    <div>฿{(row.totalCost || 0).toLocaleString()}</div>
+                    {row.price > 0 && <div className="text-[10px] text-muted-foreground">{Math.round(((row.totalCost || 0) / row.price) * 100)}% ของราคาขาย</div>}
+                  </td>
                   <td className="p-3 text-right font-mono">
                     <div>฿{row.price.toLocaleString()}</div>
                     <div className="text-[10px] text-muted-foreground">{row.channelName}</div>
                   </td>
                   <td className={cn("p-3 text-right font-mono font-bold", row.profit >= 0 ? "text-green-700" : "text-red-600")}>
-                    {row.profit >= 0 ? "+" : ""}฿{row.profit.toLocaleString()}
+                    ฿{row.profit.toLocaleString()}
                   </td>
                   <td className="p-3 text-right">
                     <MarginBadge margin={row.margin} />
@@ -349,7 +352,7 @@ function VersionTimelineTab() {
               <div className={cn("p-4 rounded border-2", totalMarginGain && totalMarginGain > 0 ? "border-green-300 bg-green-50" : "border-gray-200 bg-gray-50")}>
                 <div className="text-xs font-bold uppercase text-muted-foreground mb-1">Margin เพิ่มขึ้น</div>
                 <div className={cn("text-2xl font-black", totalMarginGain && totalMarginGain > 0 ? "text-green-600" : totalMarginGain && totalMarginGain < 0 ? "text-red-600" : "text-gray-500")}>
-                  {totalMarginGain !== null ? `${totalMarginGain > 0 ? "+" : ""}${totalMarginGain.toFixed(1)}%` : "-"}
+                  {totalMarginGain !== null ? `${totalMarginGain.toFixed(1)}%` : "-"}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">v.1 → v.{lastVersion.version}</div>
               </div>
@@ -400,7 +403,7 @@ function VersionTimelineTab() {
                           </div>
                           {row.marginDelta !== null && (
                             <div className={cn("text-[10px] text-right", row.marginDelta > 0 ? "text-green-600" : row.marginDelta < 0 ? "text-red-600" : "text-gray-400")}>
-                              margin {row.marginDelta > 0 ? "+" : ""}{row.marginDelta.toFixed(1)}%
+                              margin {row.marginDelta.toFixed(1)}%
                             </div>
                           )}
                         </div>
@@ -585,10 +588,10 @@ function CostSensitivityTab() {
                     <MarginBadge margin={row.newStats.margin} />
                   </td>
                   <td className={cn("p-3 text-right font-bold font-mono", row.marginDelta < 0 ? "text-red-600" : "text-green-600")}>
-                    {row.marginDelta > 0 ? "+" : ""}{row.marginDelta.toFixed(1)}%
+                    {row.marginDelta.toFixed(1)}%
                   </td>
                   <td className={cn("p-3 text-right font-mono", woodChangePct > 0 ? "text-red-600" : "text-green-600")}>
-                    {woodChangePct > 0 ? "+" : ""}{woodChangePct !== 0 ? `฿${Math.abs(row.woodDelta).toLocaleString()}` : "—"}
+                    {woodChangePct !== 0 ? `฿${Math.abs(row.woodDelta).toLocaleString()}` : "—"}
                   </td>
                   <td className="p-3 text-right">
                     {row.costGap !== null && row.costGap > 0 ? (

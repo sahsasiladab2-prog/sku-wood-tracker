@@ -4,7 +4,11 @@
  * Shows:
  *  1. Header: SKU name, version, production type, overall margin badge
  *  2. Channel Comparison Table: every channel side-by-side with fee, cost, profit, margin
- *  3. Cost Waterfall Bar: proportional breakdown of wood / labour / waste / profit
+ *  3. Profit Waterfall Bar: proportional breakdown of selling price → wood / labour / waste / other / profit
+ *     - Each segment shows % of selling price
+ *     - Tooltip shows ฿ value and "ถ้าลด X% จะได้กำไรเพิ่ม ฿Y"
+ *     - Threshold line at 25% margin target
+ *     - Profit bar color: red < 15%, yellow 15–25%, green > 25%
  *  4. Action Buttons: "แก้ไขต้นทุน" (→ Calculator) | "อัปเดตราคาขาย" (inline modal)
  */
 
@@ -15,8 +19,8 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { getMarginHealth } from "@/lib/projectStats";
 import { useProjects, type Project } from "@/contexts/ProjectContext";
-import { Edit3, ExternalLink, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Edit3, X, TrendingUp } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -38,7 +42,7 @@ function MarginPill({ margin }: { margin: number }) {
   return <span className={cn(base, "bg-red-100 text-red-700 border-red-300")}>✗ {margin}%</span>;
 }
 
-// ── Cost Waterfall Bar ────────────────────────────────────────────────────────
+// ── Profit Waterfall Bar ──────────────────────────────────────────────────────
 
 interface WaterfallProps {
   totalCost: number;
@@ -49,44 +53,209 @@ interface WaterfallProps {
   bestPrice: number;
 }
 
+interface TooltipState {
+  visible: boolean;
+  x: number;
+  y: number;
+  content: React.ReactNode;
+}
+
 function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit, bestPrice }: WaterfallProps) {
-  const otherCost = totalCost - woodCost - labourCost - wasteCost;
+  const otherCost = Math.max(0, totalCost - woodCost - labourCost - wasteCost);
+  const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, content: null });
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Use bestPrice as the 100% base; if no price, fall back to totalCost
+  const base = bestPrice > 0 ? bestPrice : totalCost;
+
+  const profitColor =
+    bestPrice > 0
+      ? bestProfit / bestPrice >= 0.25
+        ? "bg-green-500"
+        : bestProfit / bestPrice >= 0.15
+        ? "bg-yellow-400"
+        : "bg-red-400"
+      : "bg-gray-300";
+
   const segments = [
-    { label: "ไม้", value: woodCost, color: "bg-amber-400", textColor: "text-amber-800" },
-    { label: "แรงงาน", value: labourCost, color: "bg-blue-400", textColor: "text-blue-800" },
-    { label: "ของเสีย", value: wasteCost, color: "bg-red-300", textColor: "text-red-700" },
-    { label: "อื่นๆ", value: otherCost > 0 ? otherCost : 0, color: "bg-gray-300", textColor: "text-gray-600" },
-    { label: "กำไร", value: bestProfit > 0 ? bestProfit : 0, color: "bg-green-400", textColor: "text-green-800" },
+    {
+      label: "ค่าไม้",
+      value: woodCost,
+      color: "bg-amber-400",
+      hoverColor: "hover:bg-amber-500",
+      tip: (pct: number) => (
+        <div>
+          <div className="font-bold text-amber-800">ค่าไม้ {pct}% ของราคาขาย</div>
+          <div className="text-gray-700">฿{woodCost.toLocaleString()}</div>
+          {bestPrice > 0 && (
+            <div className="text-green-700 text-xs mt-1">
+              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(woodCost * 0.05).toLocaleString()}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: "แรงงาน",
+      value: labourCost,
+      color: "bg-blue-400",
+      hoverColor: "hover:bg-blue-500",
+      tip: (pct: number) => (
+        <div>
+          <div className="font-bold text-blue-800">แรงงาน {pct}% ของราคาขาย</div>
+          <div className="text-gray-700">฿{labourCost.toLocaleString()}</div>
+          {bestPrice > 0 && (
+            <div className="text-green-700 text-xs mt-1">
+              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(labourCost * 0.05).toLocaleString()}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: "ของเสีย",
+      value: wasteCost,
+      color: "bg-red-300",
+      hoverColor: "hover:bg-red-400",
+      tip: (pct: number) => (
+        <div>
+          <div className="font-bold text-red-800">ของเสีย {pct}% ของราคาขาย</div>
+          <div className="text-gray-700">฿{wasteCost.toLocaleString()}</div>
+          {bestPrice > 0 && (
+            <div className="text-green-700 text-xs mt-1">
+              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(wasteCost * 0.05).toLocaleString()}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: "อื่นๆ",
+      value: otherCost,
+      color: "bg-gray-300",
+      hoverColor: "hover:bg-gray-400",
+      tip: (pct: number) => (
+        <div>
+          <div className="font-bold text-gray-700">ต้นทุนอื่นๆ {pct}% ของราคาขาย</div>
+          <div className="text-gray-700">฿{otherCost.toLocaleString()}</div>
+        </div>
+      ),
+    },
+    {
+      label: "กำไร",
+      value: bestProfit > 0 ? bestProfit : 0,
+      color: profitColor,
+      hoverColor: "",
+      tip: (pct: number) => (
+        <div>
+          <div className={cn("font-bold", pct >= 25 ? "text-green-700" : pct >= 15 ? "text-yellow-700" : "text-red-700")}>
+            กำไรสุทธิ {pct}% ของราคาขาย
+          </div>
+          <div className="text-gray-700">฿{(bestProfit > 0 ? bestProfit : 0).toLocaleString()}</div>
+          {pct < 25 && (
+            <div className="text-orange-600 text-xs mt-1">
+              เป้า 25% → ต้องเพิ่มกำไร ฿{Math.ceil(bestPrice * 0.25 - (bestProfit > 0 ? bestProfit : 0)).toLocaleString()}
+            </div>
+          )}
+        </div>
+      ),
+    },
   ].filter((s) => s.value > 0);
 
-  const total = segments.reduce((s, x) => s + x.value, 0);
-  if (total <= 0) return null;
+  if (base <= 0) return null;
+
+  // 25% threshold position (from left) — only show if we have a price
+  const thresholdPct = bestPrice > 0 ? ((totalCost / bestPrice) * 100) : null; // cost boundary = where profit starts
+  const targetMarginLeft = bestPrice > 0 ? ((1 - 0.25) * 100) : null; // 75% from left = 25% profit zone
+
+  function handleMouseEnter(e: React.MouseEvent, seg: typeof segments[0]) {
+    const pct = Math.round((seg.value / base) * 100);
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltip({
+      visible: true,
+      x: e.clientX - rect.left,
+      y: -10,
+      content: seg.tip(pct),
+    });
+  }
+
+  function handleMouseLeave() {
+    setTooltip((t) => ({ ...t, visible: false }));
+  }
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">สัดส่วนต้นทุน + กำไร</p>
-      {/* Bar */}
-      <div className="flex h-7 w-full overflow-hidden rounded border-2 border-black shadow-[2px_2px_0px_0px_#000000]">
-        {segments.map((seg) => (
-          <div
-            key={seg.label}
-            className={cn("flex items-center justify-center text-[10px] font-bold overflow-hidden transition-all", seg.color)}
-            style={{ width: `${(seg.value / total) * 100}%` }}
-            title={`${seg.label}: ฿${seg.value.toLocaleString()}`}
-          >
-            {(seg.value / total) > 0.08 ? `${Math.round((seg.value / total) * 100)}%` : ""}
-          </div>
-        ))}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">สัดส่วนของราคาขาย 100%</p>
+        {bestPrice > 0 && (
+          <p className="text-xs text-muted-foreground">ราคาขาย ฿{bestPrice.toLocaleString()}</p>
+        )}
       </div>
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {segments.map((seg) => (
-          <div key={seg.label} className="flex items-center gap-1 text-xs">
-            <span className={cn("w-3 h-3 rounded-sm border border-black/20 flex-shrink-0", seg.color)} />
-            <span className="font-medium">{seg.label}</span>
-            <span className="text-muted-foreground">฿{seg.value.toLocaleString()}</span>
+
+      {/* Bar with threshold line */}
+      <div className="relative" ref={barRef}>
+        <div className="flex h-8 w-full overflow-hidden rounded border-2 border-black shadow-[2px_2px_0px_0px_#000000]">
+          {segments.map((seg) => {
+            const pct = (seg.value / base) * 100;
+            return (
+              <div
+                key={seg.label}
+                className={cn(
+                  "flex items-center justify-center text-[10px] font-bold overflow-hidden transition-colors cursor-default",
+                  seg.color,
+                  seg.hoverColor
+                )}
+                style={{ width: `${pct}%` }}
+                onMouseEnter={(e) => handleMouseEnter(e, seg)}
+                onMouseLeave={handleMouseLeave}
+              >
+                {pct > 8 ? `${Math.round(pct)}%` : ""}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 25% target margin threshold line */}
+        {targetMarginLeft !== null && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-black/60 z-10"
+            style={{ left: `${targetMarginLeft}%` }}
+            title="เป้า Margin 25%"
+          >
+            <div className="absolute -top-5 -translate-x-1/2 text-[9px] font-bold text-gray-600 whitespace-nowrap bg-white px-1 border border-gray-300 rounded">
+              เป้า 25%
+            </div>
           </div>
-        ))}
+        )}
+
+        {/* Tooltip */}
+        {tooltip.visible && (
+          <div
+            className="absolute z-20 bg-white border-2 border-black shadow-[3px_3px_0px_0px_#000000] rounded p-2 text-xs pointer-events-none min-w-[160px]"
+            style={{
+              left: Math.min(tooltip.x, (barRef.current?.offsetWidth || 300) - 170),
+              bottom: "calc(100% + 8px)",
+            }}
+          >
+            {tooltip.content}
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+        {segments.map((seg) => {
+          const pct = Math.round((seg.value / base) * 100);
+          return (
+            <div key={seg.label} className="flex items-center gap-1 text-xs">
+              <span className={cn("w-3 h-3 rounded-sm border border-black/20 flex-shrink-0", seg.color)} />
+              <span className="font-medium">{seg.label}</span>
+              <span className="text-muted-foreground">฿{seg.value.toLocaleString()}</span>
+              <span className="text-muted-foreground">({pct}%)</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -255,9 +424,7 @@ export function SKUDrawer({ project, onClose }: SKUDrawerProps) {
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">เปรียบเทียบ Channel</p>
             {channelsWithBest.length === 0 ? (
-              <div className="text-sm text-muted-foreground border-2 border-dashed border-gray-200 rounded p-4 text-center">
-                ยังไม่มี Channel — ไปเพิ่มใน Calculator
-              </div>
+              <div className="text-sm text-muted-foreground">ยังไม่มี Channel — ไปเพิ่มใน Calculator</div>
             ) : (
               <div className="border-2 border-black overflow-hidden shadow-[2px_2px_0px_0px_#000000]">
                 <table className="w-full text-xs">
@@ -290,9 +457,9 @@ export function SKUDrawer({ project, onClose }: SKUDrawerProps) {
                           </div>
                         </td>
                         <td className="p-2 text-right font-mono">฿{ch.price.toLocaleString()}</td>
-                        <td className="p-2 text-right font-mono text-red-600">-฿{ch.fee.toLocaleString()}</td>
+                        <td className="p-2 text-right font-mono text-red-600">฿{ch.fee.toLocaleString()}</td>
                         <td className={cn("p-2 text-right font-mono font-bold", ch.netProfit >= 0 ? "text-green-700" : "text-red-600")}>
-                          {ch.netProfit >= 0 ? "+" : ""}฿{ch.netProfit.toLocaleString()}
+                          ฿{ch.netProfit.toLocaleString()}
                         </td>
                         <td className="p-2 text-right">
                           <MarginPill margin={ch.margin} />
@@ -314,7 +481,7 @@ export function SKUDrawer({ project, onClose }: SKUDrawerProps) {
             )}
           </div>
 
-          {/* ── Cost Waterfall ────────────────────────────────────────── */}
+          {/* ── Profit Waterfall Bar ──────────────────────────────────── */}
           <CostWaterfall
             totalCost={project.totalCost || 0}
             woodCost={woodCost}

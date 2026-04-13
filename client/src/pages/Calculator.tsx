@@ -1183,19 +1183,19 @@ export default function Calculator() {
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-red-50">
                     <span className="font-medium">Waste ({wastePercentage}%)</span>
-                    <span className="font-bold text-red-600">+{wasteCost.toLocaleString()}</span>
+                    <span className="font-bold text-red-600">{wasteCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-blue-50">
                     <span className="font-medium">Carpenter</span>
-                    <span className="font-bold text-blue-600">+{carpenterCost.toLocaleString()}</span>
+                    <span className="font-bold text-blue-600">{carpenterCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-blue-50">
                     <span className="font-medium">Packing</span>
-                    <span className="font-bold text-blue-600">+{packingCost.toLocaleString()}</span>
+                    <span className="font-bold text-blue-600">{packingCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-blue-50">
                     <span className="font-medium">Painting</span>
-                    <span className="font-bold text-blue-600">+{paintingCost.toLocaleString()}</span>
+                    <span className="font-bold text-blue-600">{paintingCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-gray-100 font-bold border-t-4 border-black">
                     <span className="uppercase">Total Cost</span>
@@ -1203,7 +1203,7 @@ export default function Calculator() {
                   </div>
                   <div className="flex justify-between p-3 md:p-4 bg-green-50">
                     <span className="font-medium">Profit ({marginPercentage}%)</span>
-                    <span className="font-bold text-green-600">+{profit.toLocaleString()}</span>
+                    <span className="font-bold text-green-600">{profit.toLocaleString()}</span>
                   </div>
                 </div>
               </CardContent>

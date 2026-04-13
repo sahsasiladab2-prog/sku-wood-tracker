@@ -181,7 +181,7 @@ export default function Compare() {
                   "font-heading text-3xl font-bold mt-1",
                   costDiff > 0 ? "text-green-600" : costDiff < 0 ? "text-red-600" : "text-gray-600"
                 )}>
-                  {costDiff > 0 ? "-" : costDiff < 0 ? "+" : ""}฿{Math.abs(costDiff).toLocaleString()}
+                  ฿{Math.abs(costDiff).toLocaleString()}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   {costDiff > 0 ? "In-House ถูกกว่า" : costDiff < 0 ? "Outsource ถูกกว่า" : "เท่ากัน"}
@@ -203,7 +203,7 @@ export default function Compare() {
                   "font-heading text-3xl font-bold mt-1",
                   marginDiff > 0 ? "text-green-600" : marginDiff < 0 ? "text-red-600" : "text-gray-600"
                 )}>
-                  {marginDiff > 0 ? "+" : ""}{marginDiff.toFixed(1)}%
+                  {marginDiff.toFixed(1)}%
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   {marginDiff > 0 ? "In-House ดีกว่า" : marginDiff < 0 ? "Outsource ดีกว่า" : "เท่ากัน"}
@@ -225,7 +225,7 @@ export default function Compare() {
                   "font-heading text-3xl font-bold mt-1",
                   profitDiff > 0 ? "text-green-600" : profitDiff < 0 ? "text-red-600" : "text-gray-600"
                 )}>
-                  {profitDiff > 0 ? "+" : ""}฿{profitDiff.toLocaleString()}
+                  ฿{profitDiff.toLocaleString()}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   {profitDiff > 0 ? "In-House ดีกว่า" : profitDiff < 0 ? "Outsource ดีกว่า" : "เท่ากัน"}
