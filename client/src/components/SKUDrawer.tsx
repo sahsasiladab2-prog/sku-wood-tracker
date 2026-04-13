@@ -344,7 +344,7 @@ export function SKUDrawer({ project, onClose }: SKUDrawerProps) {
               className="border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#000000] transition-all h-11 font-bold text-sm"
               onClick={() => {
                 onClose();
-                navigate(`/calculator?id=${project.id}`);
+                navigate(`/calculator?edit=${project.id}`);
               }}
             >
               <Edit3 className="w-4 h-4 mr-2" />

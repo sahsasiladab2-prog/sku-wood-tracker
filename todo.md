@@ -62,3 +62,9 @@
 - [x] Build SKUDrawer component: slide-in panel with channel comparison table, cost waterfall bar, action buttons
 - [x] Replace "Analyze" button in Needs Attention and Top Performers lists with row-click to open drawer
 - [x] Add "แก้ไขต้นทุน" (→ Calculator edit) and "อัปเดตราคาขาย" (inline price modal) action buttons in drawer
+
+## Tracker Redesign + Bug Fixes
+- [x] Fix "แก้ไขต้นทุน" button in SKUDrawer to pass project ID to Calculator
+- [x] Redesign Tracker: Tab 1 SKU Portfolio (Keep/Optimize/Review badges, sortable)
+- [x] Redesign Tracker: Tab 2 Version Timeline (per-SKU cost reduction history)
+- [x] Redesign Tracker: Tab 3 Cost Sensitivity (wood price impact + backsolve margin)
