@@ -158,7 +158,8 @@ function PortfolioTab() {
                 </th>
                 <th className="text-center p-3 font-bold">Type</th>
                 <th className="text-right p-3 font-bold cursor-pointer select-none" onClick={() => toggleSort("cost")}>
-                  ต้นทุน <SortIcon k="cost" />
+                  <div>ต้นทุน <SortIcon k="cost" /></div>
+                  <div className="text-[10px] font-normal text-gray-400 normal-case">% ของราคาขาย</div>
                 </th>
                 <th className="text-right p-3 font-bold">ราคาขาย (Best)</th>
                 <th className="text-right p-3 font-bold cursor-pointer select-none" onClick={() => toggleSort("profit")}>
@@ -206,7 +207,7 @@ function PortfolioTab() {
                   </td>
                   <td className="p-3 text-right font-mono">
                     <div>{row.price.toLocaleString()}</div>
-                    <div className="text-[10px] text-muted-foreground">({Math.round(((row.totalCost || 0) / row.price) * 100)}%) {row.channelName}</div>
+                    <div className="text-[10px] text-muted-foreground">({Math.round(((row.totalCost || 0) / row.price) * 100)}%)</div>
                   </td>
                   <td className={cn("p-3 text-right font-mono font-bold", row.profit >= 0 ? "text-green-700" : "text-red-600")}>
                     {row.profit.toLocaleString()}
@@ -389,7 +390,7 @@ function VersionTimelineTab() {
                     <td className="p-3 text-right font-mono text-amber-700">{row.woodCost.toLocaleString()}</td>
                     <td className="p-3 text-right font-mono">
                       <div>{row.stats.price.toLocaleString()}</div>
-                      <div className="text-[10px] text-muted-foreground">({row.stats.price > 0 ? Math.round(((row.totalCost || 0) / row.stats.price) * 100) : 0}%) {row.stats.channelName}</div>
+                      <div className="text-[10px] text-muted-foreground">({row.stats.price > 0 ? Math.round(((row.totalCost || 0) / row.stats.price) * 100) : 0}%)</div>
                     </td>
                     <td className="p-3 text-right">
                       <MarginBadge margin={row.stats.margin} />
