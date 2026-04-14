@@ -87,3 +87,7 @@
 ## Profit Lever Enhancements (Apr 2026)
 - [x] Add interactive slider (1-30%) to Profit Lever Panel for real-time scenario planning
 - [ ] Add "lever ที่คุ้มสุด" badge to highlight best ROI lever automatically
+
+## SKU Drawer Enhancements Round 2 (Apr 2026)
+- [x] Add Target Margin Backsolve: input target margin → show required price increase OR cost reduction needed
+- [x] Add Wood Risk Indicator: highlight warning when wood cost > 40% of total cost

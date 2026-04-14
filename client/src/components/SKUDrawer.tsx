@@ -64,7 +64,23 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
   const otherCost = Math.max(0, totalCost - woodCost - labourCost - wasteCost);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, content: null });
   const [leverPct, setLeverPct] = useState(10);
+  const [targetMargin, setTargetMargin] = useState(25);
   const barRef = useRef<HTMLDivElement>(null);
+
+  // Wood Risk Indicator
+  const woodRiskPct = totalCost > 0 ? (woodCost / totalCost) * 100 : 0;
+  const isWoodRisk = woodRiskPct > 40;
+
+  // Target Margin Backsolve
+  const targetFrac = targetMargin / 100;
+  // Required price to hit target margin: price = totalCost / (1 - targetFrac)
+  const requiredPrice = totalCost > 0 && targetFrac < 1 ? Math.ceil(totalCost / (1 - targetFrac)) : 0;
+  const priceGap = bestPrice > 0 ? requiredPrice - bestPrice : 0;
+  // Required cost reduction to hit target margin at current price: cost = price * (1 - targetFrac)
+  const requiredCost = bestPrice > 0 ? Math.floor(bestPrice * (1 - targetFrac)) : 0;
+  const costGap = totalCost > 0 ? totalCost - requiredCost : 0;
+  const currentMarginForTarget = bestPrice > 0 ? (bestProfit / bestPrice) * 100 : 0;
+  const alreadyMet = currentMarginForTarget >= targetMargin;
 
   const base = bestPrice > 0 ? bestPrice : totalCost;
 
@@ -194,6 +210,19 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
 
   return (
     <div className="space-y-3">
+      {/* Wood Risk Indicator */}
+      {isWoodRisk && (
+        <div className="flex items-start gap-2 bg-orange-50 border-2 border-orange-400 rounded px-3 py-2 shadow-[2px_2px_0px_0px_#f97316]">
+          <span className="text-orange-500 text-base leading-none mt-0.5">⚠️</span>
+          <div>
+            <p className="text-xs font-black text-orange-700 uppercase tracking-wide">ค่าไม้สูงเกินไป — Wood Risk</p>
+            <p className="text-[10px] text-orange-600 mt-0.5">
+              ค่าไม้คิดเป็น <span className="font-black">{woodRiskPct.toFixed(0)}%</span> ของต้นทุนรวม (เกิน 40%) — SKU นี้เสี่ยงสูงถ้าราคาไม้ขึ้น
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">สัดส่วนของราคาขาย 100%</p>
         {bestPrice > 0 && (
@@ -328,6 +357,68 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Target Margin Backsolve ────────────────────────── */}
+      {bestPrice > 0 && (
+        <div className="border-2 border-black rounded shadow-[2px_2px_0px_0px_#000000] overflow-hidden">
+          <div className="bg-indigo-900 text-white px-3 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">🎯 ต้องทำอะไรถึง Margin เป้า?</span>
+              <span className="text-sm font-black text-indigo-200">{targetMargin}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-indigo-400">10%</span>
+              <input
+                type="range"
+                min={10}
+                max={60}
+                value={targetMargin}
+                onChange={(e) => setTargetMargin(Number(e.target.value))}
+                className="flex-1 h-1.5 accent-indigo-300 cursor-pointer"
+              />
+              <span className="text-[9px] text-indigo-400">60%</span>
+            </div>
+          </div>
+          {alreadyMet ? (
+            <div className="px-3 py-3 bg-green-50 flex items-center gap-2">
+              <span className="text-green-600 text-lg">✅</span>
+              <div>
+                <p className="text-xs font-black text-green-700">ถึงเป้าแล้ว! Margin ปัจจุบัน {currentMarginForTarget.toFixed(1)}% ≥ {targetMargin}%</p>
+                <p className="text-[10px] text-green-600">ไม่ต้องปรับอะไรเพิ่มเติม</p>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-white">
+                <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">A</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold">เพิ่มราคาขาย</div>
+                  <div className="text-[10px] text-muted-foreground">฿{bestPrice.toLocaleString()} → ฿{requiredPrice.toLocaleString()}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className={cn("text-xs font-black", priceGap > 0 ? "text-emerald-600" : "text-gray-400")}>
+                    {priceGap > 0 ? `+฿${priceGap.toLocaleString()}` : 'ถึงเป้าแล้ว'}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">ต้องเพิ่มราคา</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-amber-50">
+                <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">B</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold">ลดต้นทุนรวม</div>
+                  <div className="text-[10px] text-muted-foreground">฿{totalCost.toLocaleString()} → ฿{requiredCost.toLocaleString()}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className={cn("text-xs font-black", costGap > 0 ? "text-amber-700" : "text-gray-400")}>
+                    {costGap > 0 ? `-฿${costGap.toLocaleString()}` : 'ถึงเป้าแล้ว'}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">ต้องลดต้นทุน</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
