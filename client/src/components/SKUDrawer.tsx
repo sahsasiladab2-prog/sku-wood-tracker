@@ -65,7 +65,6 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, content: null });
   const barRef = useRef<HTMLDivElement>(null);
 
-  // Use bestPrice as the 100% base; if no price, fall back to totalCost
   const base = bestPrice > 0 ? bestPrice : totalCost;
 
   const profitColor =
@@ -77,6 +76,16 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
         : "bg-red-400"
       : "bg-gray-300";
 
+  // Profit Lever calculations (10% reduction impact)
+  const currentProfit = bestProfit > 0 ? bestProfit : 0;
+  const currentMarginPct = bestPrice > 0 ? (currentProfit / bestPrice) * 100 : 0;
+  const priceUp10Profit = bestPrice > 0 ? currentProfit + bestPrice * 0.1 : 0;
+  const priceUp10Margin = bestPrice > 0 ? (priceUp10Profit / (bestPrice * 1.1)) * 100 : 0;
+  const woodDown10Profit = currentProfit + woodCost * 0.1;
+  const woodDown10Margin = bestPrice > 0 ? (woodDown10Profit / bestPrice) * 100 : 0;
+  const labourDown10Profit = currentProfit + labourCost * 0.1;
+  const labourDown10Margin = bestPrice > 0 ? (labourDown10Profit / bestPrice) * 100 : 0;
+
   const segments = [
     {
       label: "ค่าไม้",
@@ -85,11 +94,11 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       hoverColor: "hover:bg-amber-500",
       tip: (pct: number) => (
         <div>
-          <div className="font-bold text-amber-800">ค่าไม้ {pct}% ของราคาขาย</div>
+          <div className="font-bold text-amber-800">ค่าไม้ — {pct}% ของราคาขาย</div>
           <div className="text-gray-700">฿{woodCost.toLocaleString()}</div>
           {bestPrice > 0 && (
-            <div className="text-green-700 text-xs mt-1">
-              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(woodCost * 0.05).toLocaleString()}
+            <div className="text-green-700 text-xs mt-1 border-t border-gray-200 pt-1">
+              ▼ ลด 10% → กำไรเพิ่ม ฿{Math.ceil(woodCost * 0.1).toLocaleString()} ({woodDown10Margin.toFixed(1)}%)
             </div>
           )}
         </div>
@@ -102,11 +111,11 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       hoverColor: "hover:bg-blue-500",
       tip: (pct: number) => (
         <div>
-          <div className="font-bold text-blue-800">แรงงาน {pct}% ของราคาขาย</div>
+          <div className="font-bold text-blue-800">ค่าแรงงาน — {pct}% ของราคาขาย</div>
           <div className="text-gray-700">฿{labourCost.toLocaleString()}</div>
           {bestPrice > 0 && (
-            <div className="text-green-700 text-xs mt-1">
-              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(labourCost * 0.05).toLocaleString()}
+            <div className="text-green-700 text-xs mt-1 border-t border-gray-200 pt-1">
+              ▼ ลด 10% → กำไรเพิ่ม ฿{Math.ceil(labourCost * 0.1).toLocaleString()} ({labourDown10Margin.toFixed(1)}%)
             </div>
           )}
         </div>
@@ -119,11 +128,11 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       hoverColor: "hover:bg-red-400",
       tip: (pct: number) => (
         <div>
-          <div className="font-bold text-red-800">ของเสีย {pct}% ของราคาขาย</div>
+          <div className="font-bold text-red-800">ของเสีย — {pct}% ของราคาขาย</div>
           <div className="text-gray-700">฿{wasteCost.toLocaleString()}</div>
           {bestPrice > 0 && (
-            <div className="text-green-700 text-xs mt-1">
-              ถ้าลด 5% → กำไรเพิ่ม ฿{Math.ceil(wasteCost * 0.05).toLocaleString()}
+            <div className="text-green-700 text-xs mt-1 border-t border-gray-200 pt-1">
+              ▼ ลด 10% → กำไรเพิ่ม ฿{Math.ceil(wasteCost * 0.1).toLocaleString()}
             </div>
           )}
         </div>
@@ -136,25 +145,25 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       hoverColor: "hover:bg-gray-400",
       tip: (pct: number) => (
         <div>
-          <div className="font-bold text-gray-700">ต้นทุนอื่นๆ {pct}% ของราคาขาย</div>
+          <div className="font-bold text-gray-700">ต้นทุนอื่นๆ — {pct}% ของราคาขาย</div>
           <div className="text-gray-700">฿{otherCost.toLocaleString()}</div>
         </div>
       ),
     },
     {
       label: "กำไร",
-      value: bestProfit > 0 ? bestProfit : 0,
+      value: currentProfit,
       color: profitColor,
       hoverColor: "",
       tip: (pct: number) => (
         <div>
           <div className={cn("font-bold", pct >= 25 ? "text-green-700" : pct >= 15 ? "text-yellow-700" : "text-red-700")}>
-            กำไรสุทธิ {pct}% ของราคาขาย
+            กำไรสุทธิ์ — {pct}% ของราคาขาย
           </div>
-          <div className="text-gray-700">฿{(bestProfit > 0 ? bestProfit : 0).toLocaleString()}</div>
-          {pct < 25 && (
-            <div className="text-orange-600 text-xs mt-1">
-              เป้า 25% → ต้องเพิ่มกำไร ฿{Math.ceil(bestPrice * 0.25 - (bestProfit > 0 ? bestProfit : 0)).toLocaleString()}
+          <div className="text-gray-700">฿{currentProfit.toLocaleString()}</div>
+          {pct < 25 && bestPrice > 0 && (
+            <div className="text-orange-600 text-xs mt-1 border-t border-gray-200 pt-1">
+              เป้า 25% → ต้องเพิ่มอีก ฿{Math.ceil(bestPrice * 0.25 - currentProfit).toLocaleString()}
             </div>
           )}
         </div>
@@ -164,9 +173,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
 
   if (base <= 0) return null;
 
-  // 25% threshold position (from left) — only show if we have a price
-  const thresholdPct = bestPrice > 0 ? ((totalCost / bestPrice) * 100) : null; // cost boundary = where profit starts
-  const targetMarginLeft = bestPrice > 0 ? ((1 - 0.25) * 100) : null; // 75% from left = 25% profit zone
+  const targetMarginLeft = bestPrice > 0 ? ((1 - 0.25) * 100) : null;
 
   function handleMouseEnter(e: React.MouseEvent, seg: typeof segments[0]) {
     const pct = Math.round((seg.value / base) * 100);
@@ -185,7 +192,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">สัดส่วนของราคาขาย 100%</p>
         {bestPrice > 0 && (
@@ -193,7 +200,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
         )}
       </div>
 
-      {/* Bar with threshold line */}
+      {/* Bar */}
       <div className="relative" ref={barRef}>
         <div className="flex h-8 w-full overflow-hidden rounded border-2 border-black shadow-[2px_2px_0px_0px_#000000]">
           {segments.map((seg) => {
@@ -221,7 +228,6 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-black/60 z-10"
             style={{ left: `${targetMarginLeft}%` }}
-            title="เป้า Margin 25%"
           >
             <div className="absolute -top-5 -translate-x-1/2 text-[9px] font-bold text-gray-600 whitespace-nowrap bg-white px-1 border border-gray-300 rounded">
               เป้า 25%
@@ -232,9 +238,9 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
         {/* Tooltip */}
         {tooltip.visible && (
           <div
-            className="absolute z-20 bg-white border-2 border-black shadow-[3px_3px_0px_0px_#000000] rounded p-2 text-xs pointer-events-none min-w-[160px]"
+            className="absolute z-20 bg-white border-2 border-black shadow-[3px_3px_0px_0px_#000000] rounded p-2 text-xs pointer-events-none min-w-[180px]"
             style={{
-              left: Math.min(tooltip.x, (barRef.current?.offsetWidth || 300) - 170),
+              left: Math.min(tooltip.x, (barRef.current?.offsetWidth || 300) - 190),
               bottom: "calc(100% + 8px)",
             }}
           >
@@ -244,7 +250,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
         {segments.map((seg) => {
           const pct = Math.round((seg.value / base) * 100);
           return (
@@ -257,6 +263,57 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
           );
         })}
       </div>
+
+      {/* ── Profit Lever Panel ─────────────────────────────────── */}
+      {bestPrice > 0 && (
+        <div className="border-2 border-black rounded shadow-[2px_2px_0px_0px_#000000] overflow-hidden">
+          <div className="bg-gray-900 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider">
+            ↗ ถ้าต้องการเพิ่มกำไร — ทำอะไรคุ้มที่สุด?
+          </div>
+          <div className="divide-y divide-gray-100">
+            {/* Lever 1: Raise price */}
+            <div className="flex items-center gap-3 px-3 py-2.5 bg-white">
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">1</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold">เพิ่มราคาขาย 10%</div>
+                <div className="text-[10px] text-muted-foreground">฿{bestPrice.toLocaleString()} → ฿{Math.ceil(bestPrice * 1.1).toLocaleString()}</div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-xs font-black text-emerald-600">฿{Math.ceil(bestPrice * 0.1).toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">{priceUp10Margin.toFixed(1)}% margin</div>
+              </div>
+            </div>
+            {/* Lever 2.1: Reduce wood cost */}
+            {woodCost > 0 && (
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-amber-50">
+                <div className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">2</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold">ลดค่าไม้ 10%</div>
+                  <div className="text-[10px] text-muted-foreground">฿{woodCost.toLocaleString()} → ฿{Math.ceil(woodCost * 0.9).toLocaleString()}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xs font-black text-amber-700">฿{Math.ceil(woodCost * 0.1).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground">{woodDown10Margin.toFixed(1)}% margin</div>
+                </div>
+              </div>
+            )}
+            {/* Lever 2.2: Reduce labour cost */}
+            {labourCost > 0 && (
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-blue-50">
+                <div className="w-6 h-6 rounded-full bg-blue-400 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">3</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold">ลดค่าแรงงาน 10%</div>
+                  <div className="text-[10px] text-muted-foreground">฿{labourCost.toLocaleString()} → ฿{Math.ceil(labourCost * 0.9).toLocaleString()}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xs font-black text-blue-700">฿{Math.ceil(labourCost * 0.1).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground">{labourDown10Margin.toFixed(1)}% margin</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
