@@ -203,7 +203,7 @@ function PortfolioTab() {
                   </td>
                   <td className="p-3 text-right font-mono">
                     <div>{(row.totalCost || 0).toLocaleString()}</div>
-                    {row.price > 0 && <div className="text-[10px] text-muted-foreground">{Math.round(((row.totalCost || 0) / row.price) * 100)}% ของราคาขาย</div>}
+                    {row.price > 0 && <div className="text-[10px] text-muted-foreground">({Math.round(((row.totalCost || 0) / row.price) * 100)}%)</div>}
                   </td>
                   <td className="p-3 text-right font-mono">
                     {row.price.toLocaleString()}
