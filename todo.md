@@ -80,3 +80,10 @@
 - [x] Add cost-as-% of selling price under cost column in Portfolio tab
 - [x] Show (X%) under selling price column in Portfolio tab
 - [x] Show (X%) under selling price in Version Timeline tab
+
+## Calculator Lean Display (Apr 2026)
+- [ ] Remove ฿ symbols from Calculator Cost Breakdown section
+
+## Profit Lever Enhancements (Apr 2026)
+- [x] Add interactive slider (1-30%) to Profit Lever Panel for real-time scenario planning
+- [ ] Add "lever ที่คุ้มสุด" badge to highlight best ROI lever automatically

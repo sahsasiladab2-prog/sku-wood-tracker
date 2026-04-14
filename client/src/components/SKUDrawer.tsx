@@ -63,6 +63,7 @@ interface TooltipState {
 function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit, bestPrice }: WaterfallProps) {
   const otherCost = Math.max(0, totalCost - woodCost - labourCost - wasteCost);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, content: null });
+  const [leverPct, setLeverPct] = useState(10);
   const barRef = useRef<HTMLDivElement>(null);
 
   const base = bestPrice > 0 ? bestPrice : totalCost;
@@ -76,15 +77,15 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
         : "bg-red-400"
       : "bg-gray-300";
 
-  // Profit Lever calculations (10% reduction impact)
+  // Profit Lever calculations (dynamic % from slider)
   const currentProfit = bestProfit > 0 ? bestProfit : 0;
-  const currentMarginPct = bestPrice > 0 ? (currentProfit / bestPrice) * 100 : 0;
-  const priceUp10Profit = bestPrice > 0 ? currentProfit + bestPrice * 0.1 : 0;
-  const priceUp10Margin = bestPrice > 0 ? (priceUp10Profit / (bestPrice * 1.1)) * 100 : 0;
-  const woodDown10Profit = currentProfit + woodCost * 0.1;
-  const woodDown10Margin = bestPrice > 0 ? (woodDown10Profit / bestPrice) * 100 : 0;
-  const labourDown10Profit = currentProfit + labourCost * 0.1;
-  const labourDown10Margin = bestPrice > 0 ? (labourDown10Profit / bestPrice) * 100 : 0;
+  const leverFrac = leverPct / 100;
+  const priceUpProfit = bestPrice > 0 ? currentProfit + bestPrice * leverFrac : 0;
+  const priceUpMargin = bestPrice > 0 ? (priceUpProfit / (bestPrice * (1 + leverFrac))) * 100 : 0;
+  const woodDownProfit = currentProfit + woodCost * leverFrac;
+  const woodDownMargin = bestPrice > 0 ? (woodDownProfit / bestPrice) * 100 : 0;
+  const labourDownProfit = currentProfit + labourCost * leverFrac;
+  const labourDownMargin = bestPrice > 0 ? (labourDownProfit / bestPrice) * 100 : 0;
 
   const segments = [
     {
@@ -98,7 +99,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
           <div className="text-gray-700">฿{woodCost.toLocaleString()}</div>
           {bestPrice > 0 && (
             <div className="text-green-700 text-xs mt-1 border-t border-gray-200 pt-1">
-              ▼ ลด 10% → กำไรเพิ่ม ฿{Math.ceil(woodCost * 0.1).toLocaleString()} ({woodDown10Margin.toFixed(1)}%)
+              ▼ ลด {leverPct}% → กำไรเพิ่ม ฿{Math.ceil(woodCost * leverFrac).toLocaleString()} ({woodDownMargin.toFixed(1)}%)
             </div>
           )}
         </div>
@@ -115,7 +116,7 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
           <div className="text-gray-700">฿{labourCost.toLocaleString()}</div>
           {bestPrice > 0 && (
             <div className="text-green-700 text-xs mt-1 border-t border-gray-200 pt-1">
-              ▼ ลด 10% → กำไรเพิ่ม ฿{Math.ceil(labourCost * 0.1).toLocaleString()} ({labourDown10Margin.toFixed(1)}%)
+              ▼ ลด {leverPct}% → กำไรเพิ่ม ฿{Math.ceil(labourCost * leverFrac).toLocaleString()} ({labourDownMargin.toFixed(1)}%)
             </div>
           )}
         </div>
@@ -267,20 +268,35 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
       {/* ── Profit Lever Panel ─────────────────────────────────── */}
       {bestPrice > 0 && (
         <div className="border-2 border-black rounded shadow-[2px_2px_0px_0px_#000000] overflow-hidden">
-          <div className="bg-gray-900 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider">
-            ↗ ถ้าต้องการเพิ่มกำไร — ทำอะไรคุ้มที่สุด?
+          <div className="bg-gray-900 text-white px-3 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">↗ ถ้าต้องการเพิ่มกำไร — ทำอะไรคุ้มที่สุด?</span>
+              <span className="text-sm font-black text-yellow-300">{leverPct}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-gray-400">1%</span>
+              <input
+                type="range"
+                min={1}
+                max={30}
+                value={leverPct}
+                onChange={(e) => setLeverPct(Number(e.target.value))}
+                className="flex-1 h-1.5 accent-yellow-400 cursor-pointer"
+              />
+              <span className="text-[9px] text-gray-400">30%</span>
+            </div>
           </div>
           <div className="divide-y divide-gray-100">
             {/* Lever 1: Raise price */}
             <div className="flex items-center gap-3 px-3 py-2.5 bg-white">
               <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">1</div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold">เพิ่มราคาขาย 10%</div>
-                <div className="text-[10px] text-muted-foreground">฿{bestPrice.toLocaleString()} → ฿{Math.ceil(bestPrice * 1.1).toLocaleString()}</div>
+                <div className="text-xs font-bold">เพิ่มราคาขาย {leverPct}%</div>
+                <div className="text-[10px] text-muted-foreground">฿{bestPrice.toLocaleString()} → ฿{Math.ceil(bestPrice * (1 + leverFrac)).toLocaleString()}</div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-xs font-black text-emerald-600">฿{Math.ceil(bestPrice * 0.1).toLocaleString()}</div>
-                <div className="text-[10px] text-muted-foreground">{priceUp10Margin.toFixed(1)}% margin</div>
+                <div className="text-xs font-black text-emerald-600">฿{Math.ceil(bestPrice * leverFrac).toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">{priceUpMargin.toFixed(1)}% margin</div>
               </div>
             </div>
             {/* Lever 2.1: Reduce wood cost */}
@@ -288,12 +304,12 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
               <div className="flex items-center gap-3 px-3 py-2.5 bg-amber-50">
                 <div className="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">2</div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold">ลดค่าไม้ 10%</div>
-                  <div className="text-[10px] text-muted-foreground">฿{woodCost.toLocaleString()} → ฿{Math.ceil(woodCost * 0.9).toLocaleString()}</div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-xs font-black text-amber-700">฿{Math.ceil(woodCost * 0.1).toLocaleString()}</div>
-                  <div className="text-[10px] text-muted-foreground">{woodDown10Margin.toFixed(1)}% margin</div>
+                <div className="text-xs font-bold">ลดค่าไม้ {leverPct}%</div>
+                <div className="text-[10px] text-muted-foreground">฿{woodCost.toLocaleString()} → ฿{Math.ceil(woodCost * (1 - leverFrac)).toLocaleString()}</div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-xs font-black text-amber-700">฿{Math.ceil(woodCost * leverFrac).toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">{woodDownMargin.toFixed(1)}% margin</div>
                 </div>
               </div>
             )}
@@ -302,12 +318,12 @@ function CostWaterfall({ totalCost, woodCost, labourCost, wasteCost, bestProfit,
               <div className="flex items-center gap-3 px-3 py-2.5 bg-blue-50">
                 <div className="w-6 h-6 rounded-full bg-blue-400 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">3</div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold">ลดค่าแรงงาน 10%</div>
-                  <div className="text-[10px] text-muted-foreground">฿{labourCost.toLocaleString()} → ฿{Math.ceil(labourCost * 0.9).toLocaleString()}</div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-xs font-black text-blue-700">฿{Math.ceil(labourCost * 0.1).toLocaleString()}</div>
-                  <div className="text-[10px] text-muted-foreground">{labourDown10Margin.toFixed(1)}% margin</div>
+                <div className="text-xs font-bold">ลดค่าแรงงาน {leverPct}%</div>
+                <div className="text-[10px] text-muted-foreground">฿{labourCost.toLocaleString()} → ฿{Math.ceil(labourCost * (1 - leverFrac)).toLocaleString()}</div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-xs font-black text-blue-700">฿{Math.ceil(labourCost * leverFrac).toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">{labourDownMargin.toFixed(1)}% margin</div>
                 </div>
               </div>
             )}
