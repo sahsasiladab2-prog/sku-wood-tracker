@@ -74,3 +74,9 @@
 - [x] Add cost-as-% of selling price label under cost numbers in SKU Analysis
 - [x] Fix bar labels in Tracker SKU Analysis (clarify "ไม้/ทุน" label → "ไม้/ต้นทุน%")
 - [x] Redesign cost breakdown bar to Profit Waterfall Bar with tooltips and margin threshold line
+
+## Tracker Lean Display (Apr 2026)
+- [x] Remove ฿ symbol from all numbers in Tracker page (all 3 tabs)
+- [x] Add cost-as-% of selling price under cost column in Portfolio tab
+- [x] Show (X%) under selling price column in Portfolio tab
+- [x] Show (X%) under selling price in Version Timeline tab

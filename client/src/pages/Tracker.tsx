@@ -201,15 +201,15 @@ function PortfolioTab() {
                     }
                   </td>
                   <td className="p-3 text-right font-mono">
-                    <div>฿{(row.totalCost || 0).toLocaleString()}</div>
+                    <div>{(row.totalCost || 0).toLocaleString()}</div>
                     {row.price > 0 && <div className="text-[10px] text-muted-foreground">{Math.round(((row.totalCost || 0) / row.price) * 100)}% ของราคาขาย</div>}
                   </td>
                   <td className="p-3 text-right font-mono">
-                    <div>฿{row.price.toLocaleString()}</div>
-                    <div className="text-[10px] text-muted-foreground">{row.channelName}</div>
+                    <div>{row.price.toLocaleString()}</div>
+                    <div className="text-[10px] text-muted-foreground">({Math.round(((row.totalCost || 0) / row.price) * 100)}%) {row.channelName}</div>
                   </td>
                   <td className={cn("p-3 text-right font-mono font-bold", row.profit >= 0 ? "text-green-700" : "text-red-600")}>
-                    ฿{row.profit.toLocaleString()}
+                    {row.profit.toLocaleString()}
                   </td>
                   <td className="p-3 text-right">
                     <MarginBadge margin={row.margin} />
@@ -345,7 +345,7 @@ function VersionTimelineTab() {
               <div className={cn("p-4 rounded border-2", totalCostReduction && totalCostReduction > 0 ? "border-green-300 bg-green-50" : "border-gray-200 bg-gray-50")}>
                 <div className="text-xs font-bold uppercase text-muted-foreground mb-1">ลดต้นทุนได้รวม</div>
                 <div className={cn("text-2xl font-black", totalCostReduction && totalCostReduction > 0 ? "text-green-600" : "text-gray-500")}>
-                  {totalCostReduction !== null ? (totalCostReduction > 0 ? `-฿${totalCostReduction.toLocaleString()}` : `+฿${Math.abs(totalCostReduction).toLocaleString()}`) : "-"}
+                  {totalCostReduction !== null ? (totalCostReduction > 0 ? `-${totalCostReduction.toLocaleString()}` : `${Math.abs(totalCostReduction).toLocaleString()}`) : "-"}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">v.1 → v.{lastVersion.version}</div>
               </div>
@@ -385,11 +385,11 @@ function VersionTimelineTab() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3 text-right font-mono">฿{(row.totalCost || 0).toLocaleString()}</td>
-                    <td className="p-3 text-right font-mono text-amber-700">฿{row.woodCost.toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono">{(row.totalCost || 0).toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono text-amber-700">{row.woodCost.toLocaleString()}</td>
                     <td className="p-3 text-right font-mono">
-                      <div>฿{row.stats.price.toLocaleString()}</div>
-                      <div className="text-[10px] text-muted-foreground">{row.stats.channelName}</div>
+                      <div>{row.stats.price.toLocaleString()}</div>
+                      <div className="text-[10px] text-muted-foreground">({row.stats.price > 0 ? Math.round(((row.totalCost || 0) / row.stats.price) * 100) : 0}%) {row.stats.channelName}</div>
                     </td>
                     <td className="p-3 text-right">
                       <MarginBadge margin={row.stats.margin} />
@@ -399,7 +399,7 @@ function VersionTimelineTab() {
                         <div className="space-y-0.5">
                           <div className={cn("text-xs font-bold flex items-center justify-end gap-1", row.costDelta < 0 ? "text-green-600" : row.costDelta > 0 ? "text-red-600" : "text-gray-400")}>
                             {row.costDelta < 0 ? <TrendingDown className="w-3 h-3" /> : row.costDelta > 0 ? <TrendingUp className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                            {row.costDelta < 0 ? `-฿${Math.abs(row.costDelta).toLocaleString()}` : row.costDelta > 0 ? `+฿${row.costDelta.toLocaleString()}` : "—"}
+                            {row.costDelta < 0 ? `-${Math.abs(row.costDelta).toLocaleString()}` : row.costDelta > 0 ? `${row.costDelta.toLocaleString()}` : "—"}
                           </div>
                           {row.marginDelta !== null && (
                             <div className={cn("text-[10px] text-right", row.marginDelta > 0 ? "text-green-600" : row.marginDelta < 0 ? "text-red-600" : "text-gray-400")}>
@@ -591,11 +591,11 @@ function CostSensitivityTab() {
                     {row.marginDelta.toFixed(1)}%
                   </td>
                   <td className={cn("p-3 text-right font-mono", woodChangePct > 0 ? "text-red-600" : "text-green-600")}>
-                    {woodChangePct !== 0 ? `฿${Math.abs(row.woodDelta).toLocaleString()}` : "—"}
+                    {woodChangePct !== 0 ? `${Math.abs(row.woodDelta).toLocaleString()}` : "—"}
                   </td>
                   <td className="p-3 text-right">
                     {row.costGap !== null && row.costGap > 0 ? (
-                      <span className="font-mono font-bold text-red-600">-฿{row.costGap.toLocaleString()}</span>
+                      <span className="font-mono font-bold text-red-600">-{row.costGap.toLocaleString()}</span>
                     ) : row.costGap !== null && row.costGap <= 0 ? (
                       <span className="font-mono text-green-600">✓ ถึงแล้ว</span>
                     ) : (
