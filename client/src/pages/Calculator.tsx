@@ -1043,7 +1043,8 @@ export default function Calculator() {
                   const feeAmount = Math.ceil(channel.price * (channel.feePercent / 100));
                   const netPrice = channel.price - feeAmount;
                   const profit = netPrice - totalCost;
-                  const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0";
+                  // Net Margin = Net Profit / Selling Price (not / totalCost)
+                  const margin = channel.price > 0 ? ((profit / channel.price) * 100).toFixed(1) : "0";
                   const isPositive = profit >= 0;
 
                   return (

@@ -91,3 +91,12 @@
 ## SKU Drawer Enhancements Round 2 (Apr 2026)
 - [x] Add Target Margin Backsolve: input target margin → show required price increase OR cost reduction needed
 - [x] Add Wood Risk Indicator: highlight warning when wood cost > 40% of total cost
+
+## Bug Fixes Round 2 (Apr 2026)
+- [ ] Fix wood cost % in Tracker column (showing wrong % value)
+- [ ] Add +5% wood price buffer in Calculator for cutting waste
+
+## Critical Bug Fixes (Apr 2026)
+- [x] Fix SKUDrawer: totalCost shows ฿0 — added warning + re-save prompt
+- [x] Fix Calculator: margin formula was profit/totalCost, corrected to profit/price
+- [x] SKUDrawer bar already has all segments (wood/labour/waste/other/profit) — confirmed correct

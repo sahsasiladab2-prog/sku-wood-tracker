@@ -636,7 +636,11 @@ export function SKUDrawer({ project, onClose }: SKUDrawerProps) {
                         ต้นทุนรวม
                       </td>
                       <td colSpan={2} className="p-2 text-right font-mono font-bold">
-                        ฿{(project.totalCost || 0).toLocaleString()}
+                        {(project.totalCost || 0) === 0 ? (
+                          <span className="text-orange-600 text-[10px] font-bold">⚠ ไม่มีข้อมูล — กรุณาบันทึกใหม่จาก Calculator</span>
+                        ) : (
+                          <span>฿{(project.totalCost).toLocaleString()}</span>
+                        )}
                       </td>
                     </tr>
                   </tbody>
