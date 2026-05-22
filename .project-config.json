@@ -1,0 +1,41 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [
+    "db",
+    "server",
+    "user"
+  ],
+  "dev_command": "pnpm run dev",
+  "env_vars": {
+    "DATABASE_URL": "mysql://2UA9PfwXiKzDe4P.4b071039320e:m5sla4jE12bLEb62vuLF@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/77SRbGssWJtPK3jVb4Aadc?ssl={\"rejectUnauthorized\":true}"
+  },
+  "experiments": null,
+  "git_remote": {
+    "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663173515918/77SRbGssWJtPK3jVb4Aadc",
+    "access_key_id": "ASIAZV3A2ECZNVDT6K3A",
+    "secret_access_key": "VfFwWXqgfvSCThwO4rgw0tgEDYnjy1rN7gp/Skse",
+    "session_token": "IQoJb3JpZ2luX2VjED8aCXVzLWVhc3QtMSJGMEQCIDFFe+HCOXjCNiWKHezdLNdEo1lx2FAtyhAj3h3U3QtyAiBsF1ge1RlNOyovhSMqFmWW+42fnKzafRtKd2/gO7bhqyr2AwgHEAQaDDY2NTM4NjA5ODg2NiIMxj1EMaqW/c5p5BbnKtMD7hKRGKl09OK9uJFqNB3Ow7CTt/Jqc5kBvSOM1HvKAIOZKLlBMTQR++Vw+Z7DQgCuAF1uxK8C7BKqfbSVC6UKLGE6A/OILuxu7xNUBaZMEOUm95qpKS3VBuQsNV0xH9HarNB1g7xVb337/FDbVcE853PIdYrM7r3I9i4ffJKe3Eb2t0WB/xAv0ypG0gOYr1TSFkRldNHHgzBrXfy4lc3DpJ++3bv8+MKvN+8oen5VXj9xAqOmccz5Q515PleRMuwIj68xhXKVTjVzwPfW2HQLAqxbFfcDklu+Lndx0lgXtMP1RSKcVnYOOr45CvZLIV/iOiwopahT6oVKJpD/1XzYpyVEZbUBBcUKxcz/TUeiCV+28A9E5DTLRqxrhSWzpD+4QSnhHwuBj6uDZNR/M7HIm7u6KHhso8WSkwpNDOlrk0ISjiVA4d1k/zk/v6KvqbxKi/xjY3ByMVOaZQ9XYvBGFxqxCxbb14kNJ/7cQBpZ2pkOd6JOW/6j//e+0XjGAC4yUoOPpPcTiykxmK5ZfsHE32cDnKhoxHaDc8DF0/cciEIbmieCEdV+E+Cw3bumZuTqwFK3iTjwMq+gM4M92pKKp7DCaXJZk0IyvKjpM6JYOWMuelowjqK80AY6ngGnnPQTxixi9UacB7iPh4/yY1u78aOfipxR3Xvo2SgeK8xoCjMYtn3nGKFQ08pmmysMAtH5izjd0trYKs9yrIyplIutLa7QkJp9/gxqNFPtZ1V7nPftRMJBnB8Jo00ibi9n0pW6Azb4QKTF8+DLm015QKyLZF34Ja7bRj0EGmzU6lyj8YjlSqlv7wndyDMQmimKsmeWE4DBXQqI9i3CmA==",
+    "expiration": "2026-05-22T02:05:02.000Z"
+  },
+  "name": "sku-wood-tracker",
+  "path": "/home/ubuntu/sku-wood-tracker",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "L5kjA3W9cvkKSFwgm38K6e",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "FjupM68sCrCZDCuLY3U9P5",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "sah sasilada",
+    "OWNER_OPEN_ID": "BhLno7xh5ZsxZTDde2zb6h",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "527d08e3-7b97-41f0-a7e4-45d50ec34a14",
+    "VITE_APP_ID": "77SRbGssWJtPK3jVb4Aadc",
+    "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663173515918/bQfKqdvyfnYMimLO.png",
+    "VITE_APP_TITLE": "SKU Wood Tracker",
+    "VITE_FRONTEND_FORGE_API_KEY": "gmytiDtegyFUS4dNp8TGDb",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-db-user",
+  "test_command": "pnpm test"
+}

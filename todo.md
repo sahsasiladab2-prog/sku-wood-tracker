@@ -100,3 +100,6 @@
 - [x] Fix SKUDrawer: totalCost shows ฿0 — added warning + re-save prompt
 - [x] Fix Calculator: margin formula was profit/totalCost, corrected to profit/price
 - [x] SKUDrawer bar already has all segments (wood/labour/waste/other/profit) — confirmed correct
+
+## Manual Re-price Button (May 2026)
+- [x] Add "อัปเดตราคาไม้ล่าสุด" button in Calculator to recalculate material costs from current wood prices (with confirmation dialog showing old→new per row)

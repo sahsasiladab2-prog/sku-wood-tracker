@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, Minus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search, Store } from "lucide-react";
+import { Trash2, Plus, Minus, Calculator as CalcIcon, Save, Package, AlertCircle, ChevronDown, ChevronUp, Search, Store, RefreshCw, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -50,6 +50,19 @@ export default function Calculator() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempDefaultCosts, setTempDefaultCosts] = useState(defaultLaborCosts);
 
+  // Re-price Dialog State
+  const [isRepriceOpen, setIsRepriceOpen] = useState(false);
+  interface RepriceDiff {
+    index: number;
+    code: string;
+    oldCostPerPc: number;
+    newCostPerPc: number;
+    oldTotal: number;
+    newTotal: number;
+    quantity: number;
+  }
+  const [repriceDiffs, setRepriceDiffs] = useState<RepriceDiff[]>([]);
+
   // Update local costs when default costs change (only if not editing an existing project)
   useEffect(() => {
     if (!editingProjectId) {
@@ -63,6 +76,59 @@ export default function Calculator() {
     updateDefaultLaborCosts(tempDefaultCosts);
     setIsSettingsOpen(false);
     toast.success("Default labor costs updated!");
+  };
+
+  // Re-price: compute diffs between current material costs and latest wood prices
+  const handleOpenReprice = () => {
+    if (selectedWoods.length === 0) {
+      toast.error("ยังไม่มีวัสดุในรายการ");
+      return;
+    }
+    const diffs: RepriceDiff[] = [];
+    selectedWoods.forEach((item, index) => {
+      if (item.isCustom) return; // Skip custom items
+      const latestWood = woodData.find(w => w.code === item.code);
+      if (!latestWood) return;
+      // Recalculate cost based on new price per unit and used length
+      const newCostPerPc = Math.ceil((latestWood.cost / latestWood.refQty) * item.usedLength);
+      const oldCostPerPc = item.calculatedCost;
+      if (newCostPerPc !== oldCostPerPc) {
+        const qty = typeof item.quantity === 'number' ? item.quantity : 0;
+        diffs.push({
+          index,
+          code: item.code,
+          oldCostPerPc,
+          newCostPerPc,
+          oldTotal: oldCostPerPc * qty,
+          newTotal: newCostPerPc * qty,
+          quantity: qty,
+        });
+      }
+    });
+    if (diffs.length === 0) {
+      toast.success("ราคาไม้ทุกรายการเป็นปัจจุบันแล้ว ✓");
+      return;
+    }
+    setRepriceDiffs(diffs);
+    setIsRepriceOpen(true);
+  };
+
+  const handleConfirmReprice = () => {
+    const newWoods = [...selectedWoods];
+    repriceDiffs.forEach(diff => {
+      const item = newWoods[diff.index];
+      const latestWood = woodData.find(w => w.code === item.code);
+      if (latestWood) {
+        newWoods[diff.index] = {
+          ...item,
+          cost: latestWood.cost,
+          calculatedCost: diff.newCostPerPc,
+        };
+      }
+    });
+    setSelectedWoods(newWoods);
+    setIsRepriceOpen(false);
+    toast.success(`อัปเดตราคาไม้ ${repriceDiffs.length} รายการแล้ว — กด Save เพื่อบันทึก`);
   };
   
   // Percentages
@@ -517,6 +583,85 @@ export default function Calculator() {
               <DialogFooter>
                 <Button onClick={handleSaveSettings} className="neo-button bg-black text-white hover:bg-gray-800 w-full">
                   Save Defaults
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Re-price Button */}
+          {selectedWoods.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleOpenReprice}
+              className="flex-1 md:flex-none neo-button bg-orange-400 text-black border-black hover:bg-orange-500 h-12 px-4 text-sm font-bold"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> อัปเดตราคาไม้ล่าสุด
+            </Button>
+          )}
+
+          {/* Re-price Confirmation Dialog */}
+          <Dialog open={isRepriceOpen} onOpenChange={setIsRepriceOpen}>
+            <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_#000000] max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="font-heading uppercase text-xl flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-orange-500" /> อัปเดตราคาไม้ล่าสุด
+                </DialogTitle>
+              </DialogHeader>
+              <div className="py-2 space-y-3">
+                <p className="text-sm text-muted-foreground">รายการไม้ที่ราคาเปลี่ยนแปลงจาก Wood Price ปัจจุบัน:</p>
+                <div className="border-2 border-black overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-orange-100 border-b-2 border-black">
+                      <tr>
+                        <th className="text-left p-2 font-bold uppercase text-xs">Code</th>
+                        <th className="text-right p-2 font-bold uppercase text-xs">ราคาเก่า/ชิ้น</th>
+                        <th className="text-center p-2 font-bold text-xs"></th>
+                        <th className="text-right p-2 font-bold uppercase text-xs">ราคาใหม่/ชิ้น</th>
+                        <th className="text-right p-2 font-bold uppercase text-xs">ผลต่าง</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/10">
+                      {repriceDiffs.map(diff => {
+                        const delta = diff.newCostPerPc - diff.oldCostPerPc;
+                        const totalDelta = diff.newTotal - diff.oldTotal;
+                        return (
+                          <tr key={diff.index} className="hover:bg-gray-50">
+                            <td className="p-2 font-bold">{diff.code}</td>
+                            <td className="p-2 text-right font-mono text-gray-500 line-through">{diff.oldCostPerPc}</td>
+                            <td className="p-2 text-center"><ArrowRight className="w-3 h-3 mx-auto text-gray-400" /></td>
+                            <td className="p-2 text-right font-mono font-bold">{diff.newCostPerPc}</td>
+                            <td className={`p-2 text-right font-bold text-xs ${delta < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {delta > 0 ? '+' : ''}{delta} ({totalDelta > 0 ? '+' : ''}{totalDelta})
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-gray-100 border-t-2 border-black">
+                      <tr>
+                        <td colSpan={4} className="p-2 font-bold uppercase text-xs">รวมผลต่างต้นทุน</td>
+                        <td className={`p-2 text-right font-bold ${
+                          repriceDiffs.reduce((s, d) => s + (d.newTotal - d.oldTotal), 0) <= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {(() => {
+                            const total = repriceDiffs.reduce((s, d) => s + (d.newTotal - d.oldTotal), 0);
+                            return `${total > 0 ? '+' : ''}${total}`;
+                          })()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 p-2 rounded">
+                  ⚠ การเปลี่ยนแปลงนี้จะอัปเดตเฉพาะหน้าจอ — ต้องกด <strong>Save Project</strong> เพื่อบันทึกลง DB
+                </p>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setIsRepriceOpen(false)} className="border-2 border-black">
+                  ยกเลิก
+                </Button>
+                <Button onClick={handleConfirmReprice} className="neo-button bg-orange-400 text-black hover:bg-orange-500 border-black font-bold">
+                  <RefreshCw className="mr-2 h-4 w-4" /> ยืนยันอัปเดต
                 </Button>
               </DialogFooter>
             </DialogContent>
